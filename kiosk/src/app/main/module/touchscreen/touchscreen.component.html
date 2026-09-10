@@ -1,0 +1,167 @@
+<div class="content-wrapper">
+  <div class="content-body">
+    <!-- content-header component -->
+    <app-content-header [contentHeader]="contentHeader"></app-content-header>
+
+
+
+    <!-- Knowledge base Jumbotron -->
+    <section id="knowledge-base-search">
+      <div class="row ">
+        <div class="col-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+          <div class="row">
+
+            <div class="col-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 judulhead">
+              <h4 class="judulheadd" *ngIf="loketId != 3">Ambil Antrian</h4>
+                <div class="row" *ngIf="loketId == 2">
+                  <div class="col-12 col-lg-4 col-md-12 col-sm-12 col-xs-12 kb-search-content">
+                    <div class="card cursor mb-1" (click)="print('WNI')">
+                      <div class="d-flex" style="justify-content: center;">
+                        <img alt="knowledge-base-image" class="card-img-top" src="assets/images/illustration/demand.svg" style="width: 35% !important;">
+                      </div>
+                      <div class="card-body text-center p-1">
+                        <h4>WNI</h4>
+                        <p class="text-body mb-0">Ambil antrian pasien WNI.</p>
+                      </div>
+    
+                    </div>
+                  </div>
+                  <div class="col-12 col-lg-4 col-md-12 col-sm-12 col-xs-12 kb-search-content">
+                    <div class="card cursor mb-1" (click)="print('WNA')">
+                      <div class="d-flex" style="justify-content: center;">
+                        <img alt="knowledge-base-image" class="card-img-top" src="assets/images/illustration/email.svg" style="width: 35% !important;">
+                      </div>
+                      <div class="card-body text-center p-1">
+                        <h4>WNA</h4>
+                        <p class="text-body mb-0">Ambil antrian pasien WNA.
+                        </p>
+                      </div>
+    
+                    </div>
+                  </div>
+                  <div class="col-12 col-lg-4 col-md-12 col-sm-12 col-xs-12 kb-search-content">
+                    <div class="card cursor mb-1" (click)="print('LA')">
+                      <div class="d-flex" style="justify-content: center;">
+                        <img alt="knowledge-base-image" class="card-img-top" src="assets/images/illustration/demand.svg" style="width: 35% !important;">
+                      </div>
+                      <div class="card-body text-center p-1">
+                        <h4>Lansia Anak</h4>
+                        <p class="text-body mb-0">Ambil antrian pasien Lansia Anak.</p>
+                      </div>
+    
+                    </div>
+                  </div>
+                </div>
+                <div class="row " *ngIf="loketId == 1">
+                  <div class="col-12 col-lg-6 col-md-6 col-sm-6 col-xs-12 kb-search-content">
+                    <div class="card cursor mb-1" (click)="print('UMUM')">
+                      <div class="d-flex" style="justify-content: center;">
+                        <img alt="knowledge-base-image" class="card-img-top" src="assets/images/illustration/demand.svg" style="width: 35% !important;">
+                      </div>
+                      <div class="card-body text-center p-1">
+                        <h4>Umum</h4>
+                        <p class="text-body mb-0">Ambil antrian pasien Umum.</p>
+                      </div>
+    
+                    </div>
+                  </div>
+                  <div class="col-12 col-lg-6 col-md-6 col-sm-6 col-xs-12 kb-search-content">
+                    <div class="card cursor mb-1" (click)="print('BPJS')">
+                      <div class="d-flex" style="justify-content: center;">
+                        <img alt="knowledge-base-image" class="card-img-top" src="assets/images/illustration/email.svg" style="width: 35% !important;">
+                      </div>
+                      <div class="card-body text-center p-1">
+                        <h4>BPJS</h4>
+                        <p class="text-body mb-0">Ambil antrian pasien BPJS.
+                        </p>
+                      </div>
+    
+                    </div>
+                  </div>
+                  <!-- <div class="col-12 col-lg-3 col-md-3 col-sm-3 col-xs-12 kb-search-content"></div>
+                  <div class="col-12 col-lg-6 col-md-6 col-sm-3 col-xs-12 kb-search-content">
+                    <div class="card cursor mb-1" (click)="print('BPJSMANDIRI')">
+                      <div class="d-flex" style="justify-content: center;">
+                        <img alt="knowledge-base-image" class="card-img-top" src="assets/images/illustration/email.svg"
+                          style="width: 35% !important;">
+                      </div>
+                      <div class="card-body text-center p-1">
+                        <h4>BPJS MANDIRI</h4>
+                        <p class="text-body mb-0">Ambil antrian pasien BPJS Mandiri
+                        </p>
+                      </div>
+                  
+                    </div>
+                  </div>
+                  <div class="col-12 col-lg-3 col-md-3 col-sm-3 col-xs-12 kb-search-content"></div> -->
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 judulhead" *ngIf="loketId == 3">
+              <h4 class="judulheadd">Pendaftaran</h4>
+              <div class="row">
+                <div class="col-12 col-lg-4 col-md-4 col-sm-6 col-xs-12 kb-search-content">
+                </div>
+                <div class="col-12 col-lg-4 col-md-4 col-sm-4 col-xs-12 kb-search-content">
+                  <div class="card cursor" (click)="goTo('checkin')">
+    
+                    <img alt="knowledge-base-image" class="card-img-top" src="assets/images/illustration/marketing.svg">
+                    <div class="card-body text-center">
+                      <h4>Check-In</h4>
+                      <p class="text-body mt-1 mb-0">Konfirmasi kedatangan anda.</p>
+                    </div>
+    
+                  </div>
+                </div>
+                <div class="col-12 col-lg-4 col-md-4 col-sm-4 col-xs-12 kb-search-content">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+  </div>
+</div>
+<div style="margin-top:-2000px">
+  <input #scanBarcode type="text" class="custom-control-input" placeholder="Reservasi "
+    (input)="onChangeNoreservasi($event.target.value)" [(ngModel)]="model" *ng-if="show">
+</div>
+<!-- Modal -->
+<ng-template #modalBPJS let-modal>
+  <div class="modal-header">
+    <h5 class="modal-title" id="myModalLabel160">Validasi Nomor BPJS</h5>
+    <button type="button" class="close" (click)="modal.dismiss('Cross click')" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+  <div class="modal-body" tabindex="0" ngbAutofocus>
+    <div class="input-group input-group-merge">
+      <div class="input-group-prepend">
+        <span class="input-group-text" id="basic-addon-search2"><i data-feather="credit-card"></i></span>
+      </div>
+      <input type="hidden" [(ngModel)]="item.jenisAntrian" />
+      <input
+        [(ngModel)]="item.noKepesertaan"
+        type="text"
+        class="form-control"
+        placeholder="Silahkan Isi atau Scan Nomor BPJS / NIK"
+        aria-label="Silahkan Isi atau Scan Nomor BPJS / NIK"
+        aria-describedby="basic-addon-search2"
+        autocomplete="off"
+      />
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" (click)="cekKepesertaan()" *ngIf="!isLoadingBPJS">
+      <span [data-feather]="'search'" [class]="'mr-25'"></span>Cari
+    </button>
+    <button type="button" class="btn btn-primary" *ngIf="isLoadingBPJS">
+      <span [data-feather]="'loader'" [class]="'mr-25 spinner'"></span> Mengecek Kepesertaan ...
+    </button>
+  </div>
+</ng-template>
+<!-- / Modal -->

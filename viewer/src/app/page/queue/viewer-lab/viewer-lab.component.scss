@@ -1,0 +1,363 @@
+body {
+    color: rgba(41, 50, 65, 0.8);
+    padding: 0;
+    margin: 0;
+    min-height: 100%;
+    background-color: #f2f4f6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.layout-dashboard {
+    padding: 30px 36px;
+    flex: 1 1 auto;
+}
+
+.notification {
+    padding: 30px 24px;
+    background-color: #ffffff;
+    -moz-border-radius: 20px;
+    -webkit-border-radius: 20px;
+    border-radius: 20px;
+}
+
+.notification>h6 {
+    margin: 0;
+    color: rgba(41, 50, 65, 0.8);
+}
+
+.notification>h6>a {
+    margin-left: 10px;
+}
+
+.notification>h6>a i {
+    -webkit-transform: rotate(45deg);
+    -moz-transform: rotate(45deg);
+    -o-transform: rotate(45deg);
+    -ms-transform: rotate(45deg);
+    transform: rotate(45deg);
+}
+
+.overview-box.white {
+    background: #ffffff;
+    color: rgba(41, 50, 65, 0.8);
+}
+
+.card:last-child {
+    margin-bottom: 0;
+}
+
+.overview-box {
+    display: -ms-flexbox;
+    display: flex;
+    -ms-flex-pack: justify;
+    justify-content: space-between;
+    padding-top: 24px;
+    height: 100%;
+    min-width: 200px;
+}
+
+.cards {
+    background: #ffffff;
+    padding: 20px;
+    box-sizing: border-box;
+    box-shadow: 0px 10px 40px rgb(41 50 65 / 6%);
+    -moz-border-radius: 24px;
+    -webkit-border-radius: 24px;
+    border-radius: 24px;
+
+    margin-bottom: 2rem;
+}
+
+.p-grid>.p-col,
+.p-grid>[class*="p-col"] {
+    box-sizing: border-box;
+}
+
+.p-col {
+    flex-grow: 1;
+    flex-basis: 0;
+    padding: 1rem;
+}
+
+.overview-box .overview-info>h6 {
+    margin: 0 0 2px;
+}
+
+.overview-box .overview-info>h1 {
+    margin: 0;
+}
+
+.overview-box.blue {
+    background: #69b7ff;
+    color: #ffffff;
+}
+
+.overview-box.gray {
+    background: rgba(41, 50, 65, 0.4);
+    color: #ffffff;
+}
+
+.overview-box.darkgray {
+    background: rgba(41, 50, 65, 0.8);
+    color: #ffffff;
+}
+
+.overview-box.orange {
+    background: linear-gradient(90deg, #ffb340 0%, #ffa740 100%);
+    color: #ffffff;
+}
+
+.p-datatable .p-datatable-tbody>tr.row-kosong {
+    background-color: #fc6161;
+    box-shadow: 0px 6px 20px rgb(252 97 97 / 30%);
+    color: white;
+}
+
+.p-datatable .p-datatable-tbody>tr .row-kosong {
+    background-color: #fc6161;
+    box-shadow: 0px 6px 20px rgb(252 97 97 / 30%);
+    color: white;
+}
+
+:host ::ng-deep .row-kosong {
+    background-color: #fc6161;
+    box-shadow: 0px 6px 20px rgb(252 97 97 / 30%);
+    color: white;
+}
+
+.progressbar {
+    margin: auto 10px;
+    height: 5px;
+    padding: 0;
+    width: 200%;
+    background-color: #eaf0f6;
+    border-radius: 5px;
+}
+
+.progressbar .progress {
+    height: 5px;
+    background-image: linear-gradient(270deg, #42bbff 0%, #6129ff 100%);
+    // background: linear-gradient(270deg, var(--primary-lighter-color) 0%, var(--primary-color) 100%);
+    opacity: 0.8;
+    border-radius: 5px;
+}
+
+.cards .card-header {
+    display: -ms-flexbox;
+    display: flex;
+    -ms-flex-pack: justify;
+    justify-content: space-between;
+    padding-bottom: 16px;
+}
+
+.overview-box.blue {
+    background: #69B7FF;
+    color: #FFFFFF;
+}
+
+.cards:last-child {
+    margin-bottom: 0;
+}
+
+.overview-box {
+    display: -ms-flexbox;
+    display: flex;
+    -ms-flex-pack: justify;
+    justify-content: space-between;
+    padding-top: 24px;
+    height: 100%;
+    min-width: 200px;
+}
+
+.cards .card-header .subtitle {
+    font-weight: 600;
+    color: rgba(41, 50, 65, 0.5);
+}
+
+p:last-child {
+    margin-bottom: 0;
+}
+
+p {
+    margin: 0 0 1rem 0;
+    line-height: 1.5;
+}
+
+.cards.brder {
+    border: 8px solid var(--secondary);
+
+}
+
+.border-round {
+    border-radius: 24px !important;
+}
+
+.border-1 {
+    border-width: 1px !important;
+    border-style: solid;
+    border-color: #EEE500;
+}
+
+.p-4 {
+    padding: 1.5rem !important;
+}
+
+.text-center {
+    text-align: center !important;
+}
+
+.text-900 {
+    font-size: 100px;
+}
+
+.text-400 {
+    font-size: 50px;
+}
+
+.text-300 {
+    font-size: 25px;
+}
+
+.text-800 {
+    font-size: 16pt;
+}
+
+.my-3 {
+    margin-top: 1rem !important;
+    margin-bottom: 1rem !important;
+}
+
+.blink {
+    animation: blink-animation 1s steps(5, start) infinite;
+    -webkit-animation: blink-animation 1s steps(5, start) infinite;
+}
+
+img,
+svg {
+    vertical-align: middle;
+}
+
+.header-navbar.floating-nav {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    width: 100% !important;
+}
+
+.labelrs {
+    color: #272727;
+}
+
+.sublabelrs {
+    color: #393939;
+}
+
+.p-zero {
+    padding: 0 !important;
+}
+
+.card {
+    border-radius: 10px !important;
+    border: 0;
+}
+
+.card-item-content {
+    padding: 15px 10px;
+    color: #fff;
+    position: relative;
+}
+
+.cardfooter {
+    background-color: rgba(0, 0, 0, 0.2);
+    color: rgba(255, 255, 255, .8);
+    display: block;
+    padding: 3px 0;
+    position: relative;
+    text-align: center;
+    font-size: 18px;
+    text-decoration: none;
+    z-index: 10;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
+
+.custom-label {
+    line-height: 1.2;
+}
+
+.f-xs {
+    font-size: 16px;
+}
+
+.f-sm {
+    font-size: 20px;
+}
+
+.f-lg {
+    font-size: 22px;
+}
+
+.f-xl {
+    font-size: 25px;
+}
+
+.w-400 {
+    font-weight: 400;
+}
+
+.w-600 {
+    font-weight: 600;
+}
+
+.w-800 {
+    font-weight: 800;
+}
+
+.w-bold {
+    font-weight: bold;
+}
+
+.card-img-absolute {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+}
+
+.bg-gradient-danger {
+    background: -webkit-gradient(linear, left top, right top, from(#f04), to(#ffbf96)) !important;
+    background: linear-gradient(to right, #f04, #ffbf96) !important;
+}
+
+.bg-gradient-info {
+    background: -webkit-gradient(linear, left top, right top, from(#070acd), to(#0095ff)) !important;
+    background: linear-gradient(to right, #070acd, #0095ff) !important;
+}
+
+.bg-gradient-success {
+    background: -webkit-gradient(linear, left top, right top, from(#009c83), to(#84d9d2)) !important;
+    background: linear-gradient(to right, #009c83, #84d9d2) !important;
+}
+
+.bg-gradient-primary {
+    background: -webkit-gradient(linear, left top, right top, from(#60f), to(#da8cff)) !important;
+    background: linear-gradient(to right, #60f, #da8cff) !important;
+}
+
+
+@keyframes blink-animation {
+    to {
+        visibility: hidden;
+    }
+}
+
+@-webkit-keyframes blink-animation {
+    to {
+        visibility: hidden;
+    }
+}
+
+.badge-light-danger2 {
+    background-color: rgba(234, 84, 85, 0.12);
+    border-radius: 24px;
+}

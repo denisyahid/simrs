@@ -1,0 +1,120 @@
+<div class="content-wrapper">
+  <div class="content-body">
+    
+    <div class="row" style="padding: 0;">
+      <div class="col-lg-4 col-sm-6 col-12 d-flex align-items-center justify-content-center">
+        <div>  
+          <app-content-header [contentHeader]="contentHeader"></app-content-header>
+        </div>
+      </div>
+      <div class="col-lg-2 col-sm-6 col-12">
+        <div class="card" style="background-color: #7367f0 !important;">
+          <div class="card-header d-flex flex-column align-items-start pb-0 pt-1">
+            <h2 class="font-weight-bolder mt-0 text-white">{{totalKamar}}</h2>
+            <p class=" text-white">TOTAL KAMAR</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-2 col-sm-6 col-12">
+        <div class="card" style="background-color: #28c76f !important;">
+          <div class="card-header d-flex flex-column align-items-start pb-0 pt-1">
+            <h2 class="font-weight-bolder mt-0 text-white">{{jumlahTempatTidur}}</h2>
+            <p class=" text-white">TOTAL BED</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-2 col-sm-6 col-12">
+        <div class="card" style="background-color: #ea5455 !important;">
+          <div class="card-header d-flex flex-column align-items-start pb-0 pt-1">
+            <h2 class="font-weight-bolder mt-0 text-white">{{JumlahIsi}}</h2>
+            <p class=" text-white">TERPAKAI</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-2 col-sm-6 col-12">
+        <div class="card" style="background-color: #ff9f43 !important;">
+          <div class="card-header d-flex flex-column align-items-start pb-0 pt-1">
+            <h2 class="font-weight-bolder mt-0 text-white">{{JumlahKosong}}</h2>
+            <p class=" text-white">KOSONG</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-center align-items-start">
+      <table class="col-lg-12 rounded px-2" style="border-radius: 10px !important;">
+        <tr class="text-white" style="background-color: #7367f0 !important;">
+          <th class="text-center py-1 px-1" style="font-size: 1.25rem; width: 200px !important;">NAMA RUANGAN</th>
+          <th *ngFor="let classHeader of classHeaders" class="text-center py-1" style="font-size: 1.25rem; width: 150px !important;">{{ classHeader }}</th>
+        </tr>
+        <tr *ngFor="let item of dataKamar | keyvalue" style="border-bottom: 1px solid #8b93cc4d;">
+          <td>
+            <div style="font-size: 1.5rem; padding-left: 20px;">{{ item.key }}</div>
+          </td>
+          <ng-container *ngFor="let classHeader of classHeaders">
+            <td>
+              <div class="card-body d-flex justify-content-center align-items-center" style="padding: 10px;" *ngIf="item.value[classHeader]">
+                <div class="transaction-item d-flex align-items-center justify-content-center" style="background-color: #28c76f; height: 25px; width: 50px; text-align: center;  border-radius: 5px 0 0 5px;">
+                  <div class="font-weight-bolder text-white" style="font-size: 1.2rem;" *ngIf="item.value[classHeader]">{{ item.value[classHeader].bed }}</div>
+                </div>
+                <div class="transaction-item d-flex align-items-center justify-content-center" style="background-color: #ea5455; height: 25px; width: 50px; text-align: center;">
+                  <div class="font-weight-bolder text-white" style="font-size: 1.2rem;" *ngIf="item.value[classHeader]">{{ item.value[classHeader].isi }}</div>
+                </div>
+                <div class="transaction-item d-flex align-items-center justify-content-center" style="background-color: #ff9f43; height: 25px; width: 50px; text-align: center; border-radius: 0 5px 5px 0;">
+                  <div class="font-weight-bolder text-white" style="font-size: 1.2rem;" *ngIf="item.value[classHeader]">{{ item.value[classHeader].kosong }}</div>
+                </div>
+              </div>
+              <div class="card-body d-flex justify-content-center align-items-center" style="padding: 10px;" *ngIf="!item.value[classHeader]">
+                <div class="transaction-item d-flex align-items-center justify-content-center" style="background-color: #28c76f; height: 25px; width: 50px; text-align: center; border-radius: 5px 0 0 5px;">
+                  <div class="font-weight-bolder text-white" >-</div>
+                </div>
+                <div class="transaction-item d-flex align-items-center justify-content-center" style="background-color: #ea5455; height: 25px; width: 50px; text-align: center;">
+                  <div class="font-weight-bolder text-white">-</div>
+                </div>
+                <div class="transaction-item d-flex align-items-center justify-content-center" style="background-color: #ff9f43; height: 25px; width: 50px; text-align: center; border-radius: 0 5px 5px 0;">
+                  <div class="font-weight-bolder text-white">-</div>
+                </div>
+              </div>
+            </td>
+          </ng-container>
+        </tr>
+      </table>
+    </div>
+    
+    
+
+
+  </div>
+</div>
+
+<!-- Modal -->
+<ng-template #modalSuccess let-modal>
+  <div class="modal-header">
+    <h5 class="modal-title" id="myModalLabel160">{{ruangans}}</h5>
+    <button type="button" class="close" (click)="modal.dismiss('Cross click')" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+  <div class="modal-body">
+    <ngx-datatable #table class="bootstrap core-bootstrap" [columnMode]="ColumnMode.force" [headerHeight]="40"
+      [rowHeight]="58" [footerHeight]="50" rowHeight="auto" [limit]="10" [rows]="rows" [scrollbarH]="true">
+      <ngx-datatable-column name="Tgl Registrasi" prop="tglregistrasi" [width]="150">
+      </ngx-datatable-column>
+      <!--/ <ngx-datatable-column name="No Registrasi" prop="noregistrasi" [width]="150"></ngx-datatable-column> -->
+      <!-- /<ngx-datatable-column name="No RM " prop="nocm" [width]="100">
+      </ngx-datatable-column> -->
+      <ngx-datatable-column name="Nama Pasien" prop="namapasien" [width]="250">
+      </ngx-datatable-column>
+      <ngx-datatable-column name="Ruangan" prop="namaruangan" [width]="200"></ngx-datatable-column>
+      <ngx-datatable-column name="Kelas" prop="namakelas" [width]="100"></ngx-datatable-column>
+      <ngx-datatable-column name="Kamar" prop="namakamar" [width]="200"></ngx-datatable-column>
+      <ngx-datatable-column name="Bed" prop="namabed" [width]="100"></ngx-datatable-column>
+    </ngx-datatable>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-success" (click)="modal.close('Accept click')" rippleEffect>
+      Tutup
+    </button>
+  </div>
+</ng-template>
+<!-- / Modal -->

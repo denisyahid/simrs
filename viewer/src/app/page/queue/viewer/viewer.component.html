@@ -1,0 +1,196 @@
+<div class="header-navbar navbar navbar-expand-lg align-items-center navbar-shadow navbar-light floating-nav" style="background: white;
+color: #777777;">
+    <div class="navbar-container d-flex content">
+        <div class="bookmark-wrapper d-flex align-items-center">
+            <a aria-current="page" class="nuxt-link-exact-active nuxt-link-active"
+                style="display: flex; height: 100%;"><img style="object-fit: cover; height: 50px;"
+                    src="assets/img/logo_only.png"><span
+                    style="font-size: 18px; margin-left: 20px; font-weight: bold; display: flex; align-items: center;">
+                    <div class="labels white--text" style="line-height: 1; align-self: center;">
+                        <div style="font-size: 1.5rem;color: #777777;">RSUD MALANGBONG</div>
+                        <div style="font-weight: 500;color: #777777; font-size: 0.7rem; margin-top: 5px;">{{brand}}
+                        </div>
+                    </div>
+                </span></a>
+
+        </div>
+        <ul class="nav navbar-nav align-items-center ml-auto">
+            <li class="nav-item d-none d-lg-block"><a type="button" class="nav-link nav-link-style btn"><span
+                class="ficon font-medium-5 feather icon-moon"></span></a></li>
+            <li ngbdropdown="" class="nav-item dropdown-user">
+                <span id="navbarUserDropdown" ngbdropdowntoggle="" aria-haspopup="true" aria-expanded="false"
+                    class="dropdown-toggle nav-link dropdown-user-link">
+                    <div class="user-nav d-sm-flex d-none">
+                        <span
+                            style="cursor: pointer;color:black">
+                           <span class="tanggal user-name font-weight-bolder"  [routerLink]="['/index']" pTooltip="Kembali" style="background:rgba(234, 84, 85, 0.12)">{{tgl}}</span>
+                                <span  [routerLink]="['/index']" pTooltip="Kembali"
+                                    class="jam user-name font-weight-bolder" style="background:rgba(234, 84, 85, 0.12)">{{jamSekarang}}</span>
+                                    <span class="jam user-name font-weight-bolder" (click)="handleDoubleClick()">Change Video</span>
+
+
+                        </span>
+
+
+                    </div>
+
+                </span>
+            </li>
+        </ul>
+    </div>
+</div>
+<div class="app-content">
+    <div class="p-grid">
+        <!-- <div class="p-col-12 ">
+        </div> -->
+        <div class="p-col-12 p-lg-12 p-md-12" style="margin-top:5px">
+            <div class="p-grid">
+                <div class="p-col-12 p-md-12  widget-customer-carousel">
+                    <div class="card   text-center">
+                        <!-- <p-scrollPanel [style]="{width: '100%', height: 'calc(100vh - 430px)'}"> -->
+                            <div class="customer-item-content" *ngIf="isEnglish == true">
+                                <h4>Last Queue</h4>
+                            </div>
+                            <div class="customer-item-content" *ngIf="isIndo == true">
+                                <h4>Antrian Terakhir</h4>
+                            </div>
+                            <div class="container6 " [ngClass]="{'blink badge-light-danger2' : dipanggil}"
+                                style=" height: calc(50vh - 130px); ">
+                                <p class="judul_rata antrian-akhir">
+                                    {{item.antriTerakhir != undefined ? item.antriTerakhir : '-' }}
+                                </p>
+                            </div>
+                            <div class="customer-item-content">
+                                <span style="color: #868C9B;font-size: 1.5rem;" *ngIf="isIndo == true">Silahkan Menuju</span>
+                                <span style="color: #868C9B;font-size: 1.5rem;" *ngIf="isEnglish == true">Please Come to</span>
+                                <p style="font-size:2.5rem;color:rgb(252, 97, 97);">{{item.loketPanggil}}</p>
+                            </div>
+                        <!-- </p-scrollPanel> -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="p-col-12 p-lg-6 p-md-6" style="margin-top:5px; display: none !important">
+            <div class="card text-center" style="cursor: pointer;min-height: 51.7vh;">
+                <div class="p-grid">
+                    <!-- <div class="p-col-12 p-md-12  widget-customer-carousel" (click)="showPop()"> -->
+                            <!-- <p-scrollPanel [style]="{width: '100%'}"> -->
+                                <!-- <div class="container6 " > -->
+                                <!-- <div class="video-player-wrapper"> -->
+                                    <!-- dpHls -->
+                                    <!-- <iframe [src]='safeURL' frameborder="0" width="100%" style="height:calc(100vh - 415px)" allow='autoplay'
+                                    allowfullscreen></iframe> -->
+                                    <!-- <d-player dpHls preload="auto" #player [video]="{url: pilihVideo}" [loop]='true'
+                                        [volume]="0" [screenshot]="true" style="border-radius: 10px;"></d-player> -->
+
+                                <!-- </div> -->
+                            <!-- </p-scrollPanel> -->
+                    <!-- </div> -->
+                    <div class="p-col-12 p-md-12">
+                        <p-scrollPanel class="scrollPanelS" [style]="{width: '100%', height: '47vh'}">
+                            <table id="customers">
+                                <tr *ngFor="let item of dataTableDetail">
+                                    <td style="text-align: left;">{{ item.namaruangan }}</td>
+                                    <td style="text-align: right;"><span class="p-tag fs-18">{{ item.antrian }}</span></td>
+                                </tr>
+                            </table>
+                        </p-scrollPanel>
+                        <!-- <p-table #dt [columns]="columndetail" [value]="dataTableDetail"
+                        styleClass="p-datatable-customers" [rowHover]="true" [rows]="5"
+                        [showCurrentPageReport]="true" [rowsPerPageOptions]="[5,10,25,50]"
+                        [paginator]="true" scrollable="true" [pageLinks]="5" sortMode="multiple"
+                        selectionMode="single" [(first)]="currentPage">
+                            <ng-template pTemplate="header" let-columns>
+                                <tr>
+                                    <th *ngFor="let column of columns"
+                                        pSortableColumn="{{column.field}}"
+                                        style="width: {{column.width}};text-align:{{column.align}};font-size:{{column.fontsize}};">
+                                        {{column.header}} <p-sortIcon field="{{column.field}}">
+                                        </p-sortIcon>
+                                    </th>
+                                </tr>
+                            </ng-template>
+                            <ng-template pTemplate="body" let-rowData let-columns="columns"
+                                let-rowIndex="rowIndex">
+                                <tr [pSelectableRow]="rowData" [pSelectableRowIndex]="rowIndex">
+                                    <td *ngFor="let column of columns"
+                                        style="width: {{column.width}};text-align:{{column.align}};font-size:{{column.fontsize}};">
+                                        {{rowData[column.field]}}
+                                    </td>
+                                </tr>
+                            </ng-template>
+                        </p-table> -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="p-col-12 p-lg-12" style="margin-top:-15px">
+            <div class="card">
+                <div class="p-grid">
+                    <div class="p-col-12 p-md-2 widget-customer-carousel"
+                        *ngFor="let items of listLoket; let i = index">
+                        <div class="card p-mr-4 {{color[i]}} text-center" style="min-height: 262px;">
+                            <div class="customer-item-content">
+                                <div>
+                                    <span class="no-margin f-s-15" style="font-size: 3rem;">{{items.label}}</span>
+                                    <span *ngFor="let items2 of items.value.slice(0, 5)" class="p-mt-0 no-margin f-s-1" style="font-size: 2.8rem;font-weight:bold;display: block;">{{items2}}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+<p-dialog header="Vide" [(visible)]="popUp" [modal]="true" [style]="{width: '50vw'}" [maximizable]="true"
+    [baseZIndex]="10000" [draggable]="false" [resizable]="false">
+    <div class="p-fluid p-formgrid ">
+        <div class="p-grid">
+            <!-- <div class="p-col-12">
+                <p-panel header="Pilih Channel" [toggleable]="true">
+                <div class="p-grid  "> -->
+                          <!--   <div class="p-col-12 p-md-3" *ngFor="let itemss of videoSource">
+                            <p-radioButton [inputId]="itemss.url" [value]="itemss" [(ngModel)]="item.channel">
+                            </p-radioButton>
+                            <label [for]="itemss.url"> {{itemss.name}}</label>
+                        </div>
+                    </div> -->
+                    <!-- <div class="p-grid "> -->
+                        <div class="p-col-12">
+                            <label class="label" for="input">URL</label>
+                            <input type="text" [(ngModel)]="videoURL" pInputText placeholder="URL Video" />
+                        </div>
+
+                        <!-- <div class="p-field-checkbox">
+                            <p-checkbox name="group1" binary="true" [(ngModel)]="isVoiceBrowser" inputId="ny">
+                            </p-checkbox>
+                            <label for="ny">Pakai Suara Browser</label> -->
+                        <!-- </div> -->
+                    <!-- </div>
+                </p-panel>
+            </div>-->
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button icon="pi pi-save" (click)="save(player)" label="Simpan" class="ui-button-success">
+        </p-button>
+    </ng-template>
+</p-dialog>
+
+<p-dialog header="Konfirmasi" [(visible)]="showConfirm" [modal]="true" [maximizable]="false" [draggable]="false"
+    [resizable]="false" [closable]="false" [style]="{width: '30vw'}">
+    <div class="p-fluid p-formgrid ">
+        <div class="p-grid">
+            <div class="p-col-12">
+                <p>Nyalakan Audio Browser</p>
+            </div>
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button icon="pi pi-check" (click)="showConfirm = false" label="Ya" class="ui-button-success">
+        </p-button>
+    </ng-template>
+</p-dialog>

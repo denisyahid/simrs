@@ -1,0 +1,2396 @@
+
+<template>
+    <ConfirmDialog />
+  <div class="business-dashboard hr-dashboard">
+    <div class="columns is-multiline">
+      <div class="column is-8">
+        <div class="columns is-multiline">
+          <div class="column is-12">
+            <div class="illustration-header-2 large-screen">
+              <div class="header-image">
+                <img src="/@src/assets/illustrations/dashboards/lifestyle/da.png" alt=""
+                  style="max-width:84%; margin-left: 2rem; margin-bottom: 1rem;" />
+              </div>
+              <div class="header-meta">
+                <h3 style="color:white"><i class="fas fa-id-card" aria-hidden="true"></i> Dashboard
+                  Registrasi</h3>
+                <p>
+                  Selamat Datang , {{ userLogin.pegawai.namaLengkap }}
+                </p>
+                <VControl>
+                  <Multiselect mode="single" v-model="item.filterRuangan" :options="d_Ruangan" class="f-text"
+                    placeholder="Filter ruangan" :searchable="true" autocomplete="off"
+                    @select="changeRuang(item.filterRuangan)" />
+                </VControl>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="column is-4">
+        <VCard>
+          <div class="columns is-multiline">
+            <div class="column is-12">
+              <h3 class="title is-5 mb-2">Rekap
+                <VTag @click="modalFilter = true" color="danger" rounded elevated class="is-pulled-right is-clickable">{{
+                  H.formatDateNoTime(item.filterDate)
+                }} <i class="fas fa-filter ml-3" aria-hidden="true"></i></VTag>
+              </h3>
+            </div>
+          </div>
+          <div class="columns is-multiline">
+            <div class="column is-6">
+              <CardCountRev icon="/images/simrs/icon-reservasi.png" straight :total="item.c_reservasi"
+                label="Reservasi" />
+            </div>
+            <div class="column is-6">
+              <CardCountRev icon="/images/simrs/icon-registrasi.png" straight :total="item.c_registrasi"
+                label="Pasien Teregistrasi" />
+            </div>
+            <div class="column is-6">
+              <CardCountRev icon="/images/simrs/icon-antrian.png" straight :total="item.c_antrian"
+                label="Antrian Pasien" />
+            </div>
+            <div class="column is-6">
+              <CardCountRev icon="/images/simrs/icon-dilayani.png" straight :total="item.c_dilayani"
+                label="Pasien Dilayani" />
+            </div>
+          </div>
+        </VCard>
+      </div>
+    </div>
+
+    <div class="columns is-multiline">
+      <div class="column is-3" v-if="!HIDE_FILTER">
+        <div class="column is-12 p-0">
+          <VCard radius="rounded">
+            <div class="columns is-multiline">
+              <div class="column is-12">
+                <VIconButton circle class="mr-2 is-pulled-right" icon="fas fa-expand-arrows-alt" raised bold
+                  v-tooltip.bubble="'Perkecil Tampilan '" @click="HIDE_FILTER = true">
+                </VIconButton>
+              </div>
+              <div class="column is-12 jobs-dashboard">
+                <div class="jobs-dashboard-wrapper">
+                  <div class="main-container">
+                    <div class="search-type">
+                      <div class=" job-time">
+                        <div class="job-time-title mb-2"> Pembiayaan</div>
+                        <div class="job-wrapper">
+                          <div class="type-container" v-if="dataCount.length" v-for="items of dataCount">
+                            <VCheckbox alue-true="job-type-1" :label="items.kelompokpasien" color="primary" paddingless
+                              :value="items.id" v-model="checkboxKel[items.id]" class="m-0 p-0"
+                              @change="clickKelompok()" />
+                            <span class="job-number"
+                              style="background-color:var(--placeholder) ;font-weight: bold ;color: var(--danger);">{{
+                                items.jmlkp
+                              }}</span>
+                          </div>
+                        <VPlaceholderPage v-else-if="dataCount.length === 0" :title="H.assets().notFound"
+                          small>
+                          <template #image>
+                            <img class="light-image" :src="H.assets().iconNotFound_rev" alt="" size="50%" />
+                            <img class="dark-image" src="/@src/assets/illustrations/placeholders/search-4-dark.svg" alt="" />
+                          </template>
+                        </VPlaceholderPage>
+
+                          <VPlaceloadText :lines="8" class="mt-2" v-else />
+
+
+                        </div>
+                      </div>
+                      <div class=" job-time mt-3">
+                        <div class="job-time-title mb-2"> Instalasi</div>
+                        <div class="job-wrapper">
+                          <div class="type-container" v-if="dataDept.length" v-for="items of dataDept">
+                            <VCheckbox alue-true="job-type-1" :label="items.namadepartemen" color="primary" paddingless
+                              :value="items.id" v-model="checkboxInst[items.id]" class="m-0 p-0"
+                              @change="clickInstalasi()" />
+                            <span class="job-number"
+                              style="background-color:var(--placeholder) ;font-weight: bold;color: var(--danger);">{{
+                                items.jmldp
+                              }}</span>
+                          </div>
+                          <VPlaceloadText :lines="8" class="mt-2" v-else />
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </VCard>
+        </div>
+        <div class="column is-12 p-0 mt-5">
+          <VCard class="p-0">
+            <div class="column c-title pt-2 mb-2">
+              <label style="font-weight:bold">Jadwal Dokter</label>
+            </div>
+
+            <div class="column p-2" style="height: 21rem;overflow: auto;">
+              <VCard v-for="(data) in dataDokter" class="mb-2">
+                <div class="columns is-multiline">
+                  <VAvatar style="margin-top: 13px;" size="small" picture="/images/avatars/svg/user2.svg" color="primary"
+                    squared bordered />
+                  <div class="column pb-0 pt-0">
+                    <p style="font-size: smaller;font-weight: 500;color: black;">{{ data.namalengkap }}</p>
+                    <span style="font-size: 0.9rem;"> <i aria-hidden="true" class="iconify" data-icon="feather:clock"
+                        style="padding-right: 3px;"></i> {{ data.jammulai }} s.d {{
+                          data.jamakhir }}</span>
+                    <VTag color="info" label="Tag Label" rounded elevated>{{ data.hari }}</VTag>
+                  </div>
+                </div>
+              </VCard>
+            </div>
+          </VCard>
+        </div>
+      </div>
+      <!-- <div class="column is-3"></div> -->
+      <div class="column" :class="HIDE_FILTER ? 'is-12' : 'is-9'">
+        <div class="columns is-multiline">
+          <div class="column is-12">
+            <VCard radius="rounded">
+              <div class="columns is-multiline">
+                <div class="column is-4">
+                  <VField label="Periode">
+                    <VControl class="prime-auto">
+                      <Calendar :locale="'id'" :dateFormat="H.dateTimeFormat().prime.date" inputId="range" v-model="item.qPeriode" selectionMode="range" :manualInput="false"
+                        :disabled="!item.qAktif" class="w-100" :showIcon="true" :hideOnRangeSelection="true" />
+                    </VControl>
+                  </VField>
+                </div>
+                <!-- <div class="column is-3">
+                  <VField label="No RM">
+                    <VControl icon="fas fa-id-card" fullwidth>
+                      <VInput type="text" placeholder="No RM" autocomplete="off" v-model="item.qnocm" class="is-rounded"
+                        v-on:keyup.enter="cari()" />
+                    </VControl>
+                  </VField>
+                </div> -->
+                <div class="column is-6" v-if="!isReservasi">
+                  <VField label="Cari Pasien">
+                    <VControl icon="fas fa-id-card" fullwidth>
+                      <VInput type="text" placeholder="Nama Pasien, No RM, No Registrasi, BPJS, Atau NIK"
+                        autocomplete="off" v-model="item.search" class="is-rounded" v-on:keyup.enter="cari()" />
+                    </VControl>
+                  </VField>
+                </div>
+                <div class="column is-6" v-if="isReservasi">
+                  <VField label="Cari Pasien Reservasi">
+                    <VControl icon="fas fa-id-card" fullwidth>
+                      <VInput type="text" placeholder="Nama Pasien, No Reservasi, No RM, BPJS, Atau NIK"
+                        autocomplete="off" v-model="item.qsearch" class="is-rounded"
+                        v-on:keyup.enter="fetchReservasi()" />
+                    </VControl>
+                  </VField>
+                </div>
+                <!-- <div class="column is-3">
+                  <VField label="Nama">
+                    <VControl icon="fas fa-user" fullwidth>
+                      <VInput type="text" placeholder="Nama" autocomplete="off" v-model="item.qnamapasien"
+                        class="is-rounded" v-on:keyup.enter="cari()" />
+                    </VControl>
+                  </VField>
+                </div> -->
+                <div class="column is-2 mt-5">
+                  <VIconButton type="button" color="success" class="is-rounded" rounded raised icon="fas fa-search"
+                    @click="cari()" :loading="isLoading">
+
+                  </VIconButton>
+                  <VIconButton type="button" color="info" class="is-rounded ml-1" raised icon="fas fa-filter"
+                    @click="HIDE_FILTER = false">
+                  </VIconButton>
+                </div>
+
+              </div>
+            </VCard>
+          </div>
+          <div class="column is-12">
+            <VCard radius="rounded" v-if="IS_REGISTRASI">
+              <div class="columns column">
+                <h3 class="title is-5 mb-2 mr-1">Pasien </h3>
+                <span>{{ '(' + (ds_PASIEN.total != undefined ? ds_PASIEN.total : 0) + ' totals)' }}
+                </span>
+              </div>
+              <div class="columns is-multiline">
+                <div class="column is-12">
+                  <div class="columns">
+                    <div class="column is-3">
+                      <VField v-slot="{ id }" class="is-icon-select mt-1">
+                        <VControl>
+                          <Multiselect v-model="selectView" :attrs="{ id }" placeholder="Select View" label="name"
+                            :options="d_View" :searchable="true" track-by="name" mode="single"
+                            @select="changeView(selectView)" autocomplete="off">
+                            <template #singlelabel="{ value }">
+                              <div class="multiselect-single-label">
+                                <div class="select-label-icon-wrap">
+                                  <i :class="value.icon"></i>
+                                </div>
+                                <span class="select-label-text">
+                                  {{ value.name }}
+                                </span>
+                              </div>
+                            </template>
+                            <template #option="{ option }">
+                              <div class="select-option-icon-wrap">
+                                <i :class="option.icon"></i>
+                              </div>
+                              <span class="select-option-text">
+                                {{ option.name }}
+                              </span>
+                            </template>
+                          </Multiselect>
+                        </VControl>
+                      </VField>
+                    </div>
+                    <div class="column is-3">
+                      <VField class="h-hidden-mobile">
+                        <VControl>
+                          <VSwitchBlock v-model="item.qAktif" label="Pasien Aktif" color="danger"
+                            @change="changeSwitch(item.qAktif)" />
+                        </VControl>
+                      </VField>
+                    </div>
+                    <div class="column is-6 mt-4">
+                      <VField class="h-hidden-mobile">
+                        <RouterLink :to="{ name: 'module-registrasi-pasien-lama', }">
+                          <VIconButton class="ml-3 is-pulled-right" type="button" color="info" rounded circle raised
+                            icon="fas fa-users" v-tooltip.bubble="'Pasien Lama'">
+                          </VIconButton>
+                        </RouterLink>
+                        <VButton class="ml-3 is-pulled-right" type="button" color="info" rounded raised
+                          icon="fas fa-long-arrow-alt-right" @click="pasienBaru()">
+                          Pasien Baru
+                        </VButton>
+                        <VButton class="ml-3 is-pulled-right" type="button" color="info" rounded outlined raised
+                          icon="fas fa-address-book" :loading="isLoading" @click="changeReservasi(false)"> Daftar
+                          Reservasi
+                        </VButton>
+                      </VField>
+                    </div>
+                  </div>
+
+                  <div class="user-grid user-grid-v2" v-if="selectView == 'grid'">
+                    <div class="columns is-multiline" v-if="ds_PASIEN.loading">
+                      <!--Grid item-->
+                      <div v-for="key in 8" :key="key" class="column is-4">
+                        <div class="grid-item">
+                          <VPlaceloadAvatar size="big" centered class="mb-2" />
+
+                          <VPlaceloadText class="mb-4" width="80%" :lines="3" last-line-width="60%" centered />
+
+                          <div class="people">
+                            <VPlaceloadAvatar size="small" class="mx-1" />
+                            <VPlaceloadAvatar size="small" class="mx-1" />
+                            <VPlaceloadAvatar size="small" class="mx-1" />
+                            <VPlaceloadAvatar size="small" class="mx-1" />
+                          </div>
+
+                          <VButtons>
+                            <VButton placeload="100%" dark-outlined>loading ...</VButton>
+                            <VButton placeload="100%" dark-outlined>loading ...</VButton>
+                          </VButtons>
+                        </div>
+                      </div>
+                    </div>
+
+                    <VPlaceholderPage v-else-if="ds_PASIEN.length === 0" :title="H.assets().notFound"
+                      :subtitle="H.assets().notFoundSubtitle" larger>
+                      <template #image>
+                        <img class="light-image" :src="H.assets().iconNotFound_rev" alt="" />
+                        <img class="dark-image" src="/@src/assets/illustrations/placeholders/search-4-dark.svg" alt="" />
+                      </template>
+                    </VPlaceholderPage>
+
+                    <div name="list" tag="div" class="columns is-multiline" style="height:1000px;overflow-x:auto" v-else-if="ds_PASIEN.length > 0">
+
+                      <div v-for="item in ds_PASIEN" :key="item.id" class="column is-4">
+                        <div class="grid-item-wrap is-clickable">
+                          <!-- @click="clickCard(item)" -->
+                          <div :class="'grid-item-head ' + (item.norec_pd != null ? 'is-registrasi' : '')">
+                            <div class="flex-head">
+
+                              <div class="meta">
+                                <span v-if="item.norec_pd != null" class="dark-inverted">
+                                  {{ item.namaruangan }}
+                                </span>
+                                <!-- <span v-if="item.norec_pd != null" class="dark-inverted">
+                                  {{ item.umur }}
+                                </span> -->
+
+                                <span v-if="item.norec_pd == null" class="dark-inverted"
+                                  style=" color: var(--dark-text);">
+                                  Belum Registrasi
+                                </span>
+                                <span :style="item.norec_pd == null ? 'color: var(--dark-text);' : ''">
+                                  {{
+                                    item.norec_pd == null
+                                    ? 'NIK ' + item.noidentitas
+                                    : H.formatDateIndoSimple(item.tglregistrasi)
+                                  }}
+                                </span>
+                              </div>
+                              <div v-if="item.norec_pd != null" class="status-icon " style="background-color: white;">
+                                <i aria-hidden="true" class="fas fa-check" style="color:var(--success)"></i>
+                              </div>
+                              <div v-if="item.norec_pd == null" class="status-icon is-danger"
+                                style=" color: var(--dark-text);">
+                                <i aria-hidden="true" class="fas fa-times"></i>
+                              </div>
+                            </div>
+
+                          </div>
+                          <div class="flex-head" style=" display: flex; justify-content: space-between;">
+                            <div>
+                              <VTag v-if="item.kelompokpasien != null" class="mt-3 ml-2" :label="item.kelompokpasien"
+                              :color="item.kelompokpasien == 'BPJS' ? 'green' : 'orange'" rounded />
+                              <VTag v-if="item.ismobilejkn" class="mt-3 ml-2" :label="'M-JKN'" :color="'purple'" rounded />
+                              <VTag  rounded :label="item.ischeckin == true ? 'Sudah Checkin' : 'Belum Checkin'" v-if="item.ismobilejkn == true"
+                               :color="item.ischeckin == true ? 'success' : 'danger'" class="ml-2" />
+                            </div>
+                            <div style=" display: flex; justify-content: space-between;">
+                              <!-- <VDropdown icon="feather:more-vertical" spaced right class="mt-1"
+                                v-if="item.status != 'Meninggal'" v-tooltip.bubble="'DETAIL PASIEN'"> -->
+                                <VDropdown icon="feather:more-vertical" spaced right class="mt-1"
+                                v-tooltip.bubble="'DETAIL PASIEN'">
+                                <template #content>
+                                  <!-- MJKN dan belum check-in -->
+                                  <div  v-if="item.ismobilejkn == true && ( item.ischeckin == false ||  item.ischeckin == null)">
+                                    <a role="menuitem" @click="checkinJKN(item)"
+                                      class="dropdown-item is-media">
+                                      <div class="icon">
+                                        <i aria-hidden="true" class="lnil lnil-pointer"></i>
+                                      </div>
+                                      <div class="meta">
+                                        <span>Check-in MJKN</span>
+                                        <span>Update Status Check-in</span>
+                                      </div>
+                                    </a>
+                                    <hr class="dropdown-divider" />
+                                    <a style="background: #cd001a;margin-bottom: -6px;" v-if="item.norec_pd != null"
+                                      role="menuitem" @click="batalRegis(item)" class="dropdown-item is-media">
+                                      <div class="icon">
+                                        <i aria-hidden="true" class="fas fa-times-circle" style="color: aliceblue;"></i>
+                                      </div>
+                                      <div class="meta">
+                                        <span style="color:white">Batal Registrasi</span>
+                                      </div>
+                                    </a>
+                                  </div>
+                                     <!-- Selain M-JKN -->
+                                  <div style="height: 22rem;overflow: auto;" v-else>
+                                     <a style="background: #141414;" v-if="item.tglmeninggal != null"
+                                          role="menuitem" @click="batalMeninggal(item)" class="dropdown-item is-media">
+                                          <div class="icon">
+                                            <i aria-hidden="true" class="fas fa-child" style="color: aliceblue;"></i>
+                                          </div>
+                                          <div class="meta">
+                                            <span style="color:white">Batal Meniggal</span>
+                                          </div>
+                                        </a>
+                                    <a v-if="item.norec_pd == null" role="menuitem" @click="registrasi(item)"
+                                      class="dropdown-item is-media">
+                                      <div class="icon">
+                                        <i aria-hidden="true" class="lnil lnil-pointer"></i>
+                                      </div>
+                                      <div class="meta">
+                                        <span>Registrasi</span>
+                                        <span>Daftarkan pasien ke ruangan</span>
+                                      </div>
+                                    </a>
+
+                                    <a v-if="item.norec_pd != null" role="menuitem" @click="detailRegistrasi(item)"
+                                      class="dropdown-item is-media">
+                                      <div class="icon">
+                                        <i class="fas fa-eye" aria-hidden="true"></i>
+                                      </div>
+                                      <div class="meta">
+                                        <span>Lihat Registrasi</span>
+                                        <span>Lihat Detail Registrasi</span>
+                                      </div>
+                                    </a>
+                                    <a v-if="item.norec_pd != null" role="menuitem" @click="editRegistrasi(item)"
+                                      class="dropdown-item is-media">
+                                      <div class="icon">
+                                        <i aria-hidden="true" class="lnil lnil-pencil"></i>
+                                      </div>
+                                      <div class="meta">
+                                        <span>Edit Registrasi</span>
+                                        <span>Ubah Data Pendaftaran </span>
+                                      </div>
+                                    </a>
+                                    <a v-if="item.norec_pd != null" role="menuitem" class="dropdown-item is-media"
+                                      @click="mutasiPasien(item)">
+                                      <div class="icon">
+                                        <i class="iconify" data-icon="feather:log-in" aria-hidden="true"></i>
+                                      </div>
+                                      <div class="meta">
+                                        <span>Mutasi Pasien</span>
+                                        <span>Pindahkan Pasien</span>
+                                      </div>
+                                    </a>
+                                    <a v-if="item.norec_pd != null" role="menuitem" @click="asuransi(item)"
+                                      class="dropdown-item is-media">
+                                      <div class="icon">
+                                        <i class="fas fa-notes-medical" aria-hidden="true"></i>
+                                      </div>
+                                      <div class="meta">
+                                        <span> Asuransi</span>
+                                        <span>Ubah Data Asuransi </span>
+                                      </div>
+                                    </a>
+                                    <a style="background: #cd001a;margin-bottom: -6px;" v-if="item.norec_pd != null"
+                                      role="menuitem" @click="batalRegis(item)" class="dropdown-item is-media">
+                                      <div class="icon">
+                                        <i aria-hidden="true" class="fas fa-times-circle" style="color: aliceblue;"></i>
+                                      </div>
+                                      <div class="meta">
+                                        <span style="color:white">Hapus Registrasi</span>
+                                      </div>
+                                    </a>
+                                    <hr class="dropdown-divider" />
+                                    <a v-if="item.norec_pd != null" role="menuitem" @click="cetakSEP(item)"
+                                      class="dropdown-item is-media">
+                                      <div class="icon">
+                                        <i aria-hidden="true" class="lnil lnil-printer"></i>
+                                      </div>
+                                      <div class="meta">
+                                        <span>Cetak SEP</span>
+                                        <span>Cetak Surat Elegibilitas </span>
+                                      </div>
+                                    </a>
+                                    <a v-if="item.norec_pd != null" role="menuitem" @click="cetakRegisRanap(item)"
+                                      class="dropdown-item is-media">
+                                      <div class="icon">
+                                        <i class="fas fa-print" aria-hidden="true"></i>
+                                      </div>
+                                      <div class="meta">
+                                        <span>Surat Registrasi Ranap</span>
+                                      </div>
+                                    </a>
+                                    <a v-if="item.norec_pd != null" role="menuitem" @click="showModalSKSakit(item)"
+                                      class="dropdown-item is-media">
+                                      <div class="icon">
+                                        <i class="fas fa-print" aria-hidden="true"></i>
+                                      </div>
+                                      <div class="meta">
+                                        <span>Surat Sakit</span>
+                                      </div>
+                                    </a>
+                                    <a v-if="item.norec_pd != null" role="menuitem" @click="cetakKeluarMasuk(item)"
+                                      class="dropdown-item is-media">
+                                      <div class="icon">
+                                        <i class="fas fa-print" aria-hidden="true"></i>
+                                      </div>
+                                      <div class="meta">
+                                        <span>Lembar Masuk dan Keluar</span>
+                                      </div>
+                                    </a>
+                                    <a v-if="item.norec_pd != null" @click="cetakBuktiPendaftaran(item)" role="menuitem"
+                                      class="dropdown-item is-media">
+                                      <div class="icon">
+                                        <i class="fas fa-print" aria-hidden="true"></i>
+                                      </div>
+                                      <div class="meta">
+                                        <span>Poli Antrian</span>
+                                        <span>Cetak Nomor</span>
+                                      </div>
+                                    </a>
+                                    <a v-if="item.norec_pd != null" @click="cetakLabel(item)" role="menuitem"
+                                      class="dropdown-item is-media">
+                                      <div class="icon">
+                                        <i class="fas fa-print" aria-hidden="true"></i>
+                                      </div>
+                                      <div class="meta">
+                                        <span>Label Pasien</span>
+                                        <span>Cetak Label</span>
+                                      </div>
+                                    </a>
+                                    <a v-if="item.norec_pd != null" @click="cetakIdentitas(item)" role="menuitem"
+                                      class="dropdown-item is-media">
+                                      <div class="icon">
+                                        <i class="fas fa-print" aria-hidden="true"></i>
+                                      </div>
+                                      <div class="meta">
+                                        <span>Identitas Pasien</span>
+                                        <span>Cetak Identitas</span>
+                                      </div>
+                                    </a>
+                                    <a v-if="item.norec_pd != null" @click="cetakLabelODC(item)" role="menuitem"
+                                      class="dropdown-item is-media">
+                                      <div class="icon">
+                                        <i class="fas fa-print" aria-hidden="true"></i>
+                                      </div>
+                                      <div class="meta">
+                                        <span>Label Pasien ODC</span>
+                                        <span>Cetak Label</span>
+                                      </div>
+                                    </a>
+                                    <a v-if="item.norec_pd != null" @click="cetakkartuPasien(item)" role="menuitem"
+                                      class="dropdown-item is-media">
+                                      <div class="icon">
+                                        <i class="fas fa-print" aria-hidden="true"></i>
+                                      </div>
+                                      <div class="meta">
+                                        <span>Kartu Pasien</span>
+                                        <span>Cetak Kartu</span>
+                                      </div>
+                                    </a>
+
+                                    <a v-if="item.norec_pd != null" @click="cetakSuratKeteranganDokter(item)"
+                                      role="menuitem" class="dropdown-item is-media">
+                                      <div class="icon">
+                                        <i class="fas fa-print" aria-hidden="true"></i>
+                                      </div>
+                                      <div class="meta">
+                                        <span>Surat Keterangan Dokter</span>
+                                        <span>Cetak Surat</span>
+                                      </div>
+                                    </a>
+
+                                    <a v-if="item.norec_pd != null" @click="cetakSuratKeteranganKeluar(item)"
+                                      role="menuitem" class="dropdown-item is-media">
+                                      <div class="icon">
+                                        <i class="fas fa-print" aria-hidden="true"></i>
+                                      </div>
+                                      <div class="meta">
+                                        <span>Surat Keterangan Keluar</span>
+                                        <span>Cetak Surat</span>
+                                      </div>
+                                    </a>
+                                    <a v-if="item.norec_pd != null" @click="cetakGelangPasien(item)" role="menuitem"
+                                      class="dropdown-item is-media">
+                                      <div class="icon">
+                                        <i class="fas fa-print" aria-hidden="true"></i>
+                                      </div>
+                                      <div class="meta">
+                                        <span>Gelang Pasien</span>
+                                        <span>Cetak Gelang</span>
+                                      </div>
+                                    </a>
+                                  </div>
+
+                                </template>
+                              </VDropdown>
+                            </div>
+                          </div>
+                          <div class="grid-item">
+                            <VAvatar :picture="(item.foto != null ? item.foto : '/images/other/no_image.jpg')" :badge="(item.jeniskelamin.toUpperCase() == 'LAKI-LAKI' ? '/images/other/male.png' :
+                              '/images/other/female.png')" size="big" />
+                            <h3 class="dark-inverted">{{ item.namapasien }}</h3>
+                            <VTag style="font-size: 11px" color="info">{{ item.umur }}</VTag>
+                            <hr class="mt-3" style="height: 2px; margin: auto; width: 170px; background-color: rgb(25, 168, 25); border: none; font-weight: bold;">
+                            <div class="mt-1 justify-content-center items-center text-center">
+                              <p>No RM : {{ item.nocm }}</p>
+                              <p>No REG : {{ item.noregistrasi }}</p>
+                              <p>No BPJS : {{ item.nobpjs }}</p>
+                              <p v-if="item.norec_pd != null">NIK : {{ item.noidentitas }}</p>
+                              <!-- <p>Status : {{ item.status }}</p> -->
+                            </div>
+                            <div class="people">
+                              <VSnack
+                                :title="(item.norec_pd != null ? (item.kelompokpasien == 'BPJS' ? item.nosep : item.dokter) : item.tgllahir)"
+                                color="info"
+                                :icon="(item.norec_pd != null ? (item.kelompokpasien == 'BPJS' ? 'fa:address-card' : 'fa:user-md') : 'feather:calendar')"
+                                v-tooltip.top="(item.kelompokpasien == 'BPJS' ? item.nosep : item.dokter)">
+                                <i class="iconify" data-icon="feather:plus"></i>
+                              </VSnack>
+                            </div>
+                            <div class="buttons">
+                              <button class="button v-button is-success" @click="emr(item)" v-if="item.norec_pd != null"
+                                style="width:100%">
+                                <span class="icon" style="color:white">
+                                  <i aria-hidden="true" class="iconify" data-icon="feather:user"></i>
+                                </span>
+                                <span style="color:white">Profile</span>
+                              </button>
+
+                              <button class="button v-button is-dark-outlined" @click="emr(item)"
+                                v-if="item.norec_pd == null">
+                                <span class="icon">
+                                  <i aria-hidden="true" class="iconify" data-icon="fa:stethoscope"></i>
+                                </span>
+                                <span>Riwayat EMR</span>
+                              </button>
+                              <button class="button v-button is-info" @click="registrasi(item)"
+                                v-if="item.norec_pd == null">
+                                <span class="icon">
+                                  <i style="color:white" aria-hidden="true" class="iconify"
+                                    data-icon="feather:arrow-right"></i>
+                                </span>
+                                <span style="color:white">Registrasi</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="list-view list-view-v1" v-else-if="selectView == 'list'">
+
+                    <VPlaceholderPage v-if="ds_PASIEN.length === 0" title="We couldn't find any matching results."
+                      subtitle="Too bad. Looks like we couldn't find any matching results for the
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                search terms you've entered. Please try different search terms or
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                criteria."
+                      larger>
+                      <template #image>
+                        <img class="light-image" src="/@src/assets/illustrations/placeholders/search-1.svg" alt="" />
+                        <img class="dark-image" src="/@src/assets/illustrations/placeholders/search-1-dark.svg" alt="" />
+                      </template>
+                    </VPlaceholderPage>
+
+                    <div class="list-view-inner" v-else-if="ds_PASIEN.length > 0">
+
+                      <TransitionGroup name="list-complete" tag="div">
+                        <div v-for="(item, key) in ds_PASIEN" :key="key" class="list-view-item">
+                          <div class="list-view-item-inner is-clickable">
+                            <VAvatar :picture="(item.foto != null ? item.foto : '/images/other/no_image.jpg')" :badge="(item.jeniskelamin == 'LAKI-LAKI' ? '/images/other/male.png'
+                              : '/images/other/female.png')" size="large" />
+                            <div class="meta-left">
+                              <h3>{{ item.namapasien }}</h3>
+                              <span>
+                                <i aria-hidden="true" class="iconify" data-icon="fa:address-card"></i>
+                                <span class="ml-1 mt-1">{{ item.noidentitas }}</span>
+                              </span>
+                              <div class="icon-list">
+                                <span>
+                                  <i aria-hidden="true" class="lnil lnil-cardiology fs-1"></i>
+                                  <span class="fs-1">{{ item.tgllahir }}</span>
+                                </span>
+                                <span>
+                                  <i aria-hidden="true"
+                                    class="lnil
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         lnil-sort fs-1"></i>
+                                  <span class="fs-1">{{ item.umur }}</span>
+                                </span>
+                                <span>
+                                  <i aria-hidden="true" class="lnil lnil-map fs-1"></i>
+                                  <span class="fs-1">{{ item.alamatlengkap }}</span>
+                                </span>
+
+                              </div>
+                            </div>
+                            <div class="meta-right">
+                              <div class="tags">
+                                <VTag :label="item.norec_pd != null ? item.namaruangan : 'Belum Registrasi'"
+                                  :color="item.norec_pd != null ? 'success' : 'danger'" rounded elevated
+                                  v-tooltip.left="item.norec_pd != null ? item.namaruangan : 'Belum Registrasi'" />
+                                <VTag v-if="item.norec_pd != null" :label="H.formatDate(item.tglregistrasi, 'YYYY-MM-DD')"
+                                  :color="'success'" rounded elevated class="mt-1" />
+                              </div>
+                              <div class="columns is-multiline">
+                                <div class="column is-12">
+                                  <div class="stats">
+                                    <div class="stat">
+                                      <span>{{ item.nocm }}</span>
+                                      <span>No RM</span>
+                                    </div>
+                                    <div class="separator"></div>
+                                    <div class="stat">
+                                      <span>{{ item.noregistrasi }}</span>
+                                      <span>No REG</span>
+                                    </div>
+                                    <div class="separator"></div>
+                                    <div class="stat">
+                                      <span>{{ item.nohp ? item.nohp : '0000000000000'
+                                      }}</span>
+                                      <span>No HP</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div class="column is-12">
+                                  <div class="stats">
+                                    <div class="stat">
+                                      <span>{{ item.nobpjs }}</span>
+                                      <span>No BPJS</span>
+                                    </div>
+                                    <div class="separator"></div>
+                                    <div class="stat">
+                                      <span>{{ item.jeniskelamin }}</span>
+                                      <span>JK</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <VDropdown icon="feather:more-vertical" spaced right >
+                              <template #content>
+                                <a role="menuitem" href="#" class="dropdown-item is-media">
+                                  <div class="icon">
+                                    <i aria-hidden="true" class="lnil lnil-user-alt"></i>
+                                  </div>
+                                  <div class="meta">
+                                    <span>Profile</span>
+                                    <span>lihat profile</span>
+                                  </div>
+                                </a>
+                                <a v-if="item.norec_pd == null" role="menuitem" href="#" class="dropdown-item is-media">
+                                  <div class="icon">
+                                    <i aria-hidden="true" class="lnil lnil-pointer"></i>
+                                  </div>
+                                  <div class="meta">
+                                    <span>Registrasi</span>
+                                    <span>Daftarkan pasien ke ruangan</span>
+                                  </div>
+                                </a>
+                                <a v-else-if="item.norec_pd != null" role="menuitem" href="#"
+                                  class="dropdown-item is-media">
+                                  <div class="icon">
+                                    <i aria-hidden="true" class="lnil lnil-medical-sign"></i>
+                                  </div>
+                                  <div class="meta">
+                                    <span>EMR</span>
+                                    <span>Lihat Rekam Medis pasien </span>
+                                  </div>
+                                </a>
+                              </template>
+                            </VDropdown>
+                          </div>
+                        </div>
+                      </TransitionGroup>
+                    </div>
+                  </div>
+
+
+                  <VFlexPagination v-model:current-page="currentPage.page" :item-per-page="currentPage.limit"
+                    :total-items="ds_PASIEN.total" :max-links-displayed="5">
+                    <template #before-pagination>
+                    </template>
+                    <template #before-navigation>
+                      <VFlex class="mr-4 mt-1" column-gap="1rem">
+                        <VField>
+                        </VField>
+                        <VField>
+                          <VControl>
+                            <div class="select is-rounded">
+                              <select v-model="currentPage.limit">
+                                <option :value="3">3 results per page</option>
+                                <option :value="5">5 results per page</option>
+                                <option :value="6">6 results per page</option>
+                                <option :value="10">10 results per page</option>
+                                <option :value="15">15 results per page</option>
+                                <option :value="25">25 results per page</option>
+                                <option :value="50">50 results per page</option>
+                                <option :value="100">100 results per page</option>
+                                <option :value="200">200 results per page</option>
+                                <option :value="500">500 results per page</option>
+                                <option :value="1000">1000 results per page</option>
+                                <option :value="10000">All</option>
+                              </select>
+                            </div>
+                          </VControl>
+                        </VField>
+                      </VFlex>
+                    </template>
+                  </VFlexPagination>
+                </div>
+
+              </div>
+            </VCard>
+            <VCard radius="rounded" v-if="!IS_REGISTRASI">
+              <div class="columns column">
+                <h3 class="title is-5 mb-2 mr-1">Daftar Reservasi </h3>
+                <span>{{ '(' + (ds_RESERVASI.total != undefined ? ds_RESERVASI.total : 0) + ' totals)' }}
+                </span>
+              </div>
+              <div class="columns is-multiline">
+                <div class="column is-12">
+                  <div class="columns">
+                    <div class="column is-3">
+                      <VField v-slot="{ id }" class="is-icon-select mt-1">
+                        <VControl>
+                          <Multiselect v-model="selectView" :attrs="{ id }" placeholder="Select View" label="name"
+                            :options="d_View" :searchable="true" track-by="name" mode="single"
+                            @select="changeView(selectView)" autocomplete="off">
+                            <template #singlelabel="{ value }">
+                              <div class="multiselect-single-label">
+                                <div class="select-label-icon-wrap">
+                                  <i :class="value.icon"></i>
+                                </div>
+                                <span class="select-label-text">
+                                  {{ value.name }}
+                                </span>
+                              </div>
+                            </template>
+                            <template #option="{ option }">
+                              <div class="select-option-icon-wrap">
+                                <i :class="option.icon"></i>
+                              </div>
+                              <span class="select-option-text">
+                                {{ option.name }}
+                              </span>
+                            </template>
+                          </Multiselect>
+                        </VControl>
+                      </VField>
+                    </div>
+                    <div class="column is-3">
+                      <VField class="h-hidden-mobile">
+                        <VControl>
+                          <VSwitchBlock v-model="item.qAktif" label="Pasien Aktif" color="danger"
+                            @change="changeSwitch(item.qAktif)" />
+                        </VControl>
+
+                      </VField>
+                    </div>
+                    <div class="column is-6">
+                      <VField class="h-hidden-mobile">
+                        <RouterLink :to="{ name: 'module-registrasi-pasien-lama', }">
+                          <VIconButton class="ml-3 is-pulled-right" type="button" color="info" rounded circle raised
+                            icon="fas fa-users" v-tooltip.bubble="'Pasien Lama'">
+                          </VIconButton>
+                        </RouterLink>
+                        <VButton class="ml-3 is-pulled-right" type="button" color="info" rounded raised
+                          icon="fas fa-long-arrow-alt-right" @click="pasienBaru()">
+                          Pasien Baru
+                        </VButton>
+                        <VButton class="ml-3 is-pulled-right" type="button" color="info" rounded outlined raised
+                          icon="fas fa-wheelchair" :loading="isLoading" @click="changeReservasi(true)"> Daftar
+                          Registrasi
+                        </VButton>
+                      </VField>
+                    </div>
+                  </div>
+
+                  <div class="user-grid user-grid-v2" v-if="selectView == 'grid'">
+                    <div class="columns is-multiline" v-if="ds_RESERVASI.loading">
+                      <!--Grid item-->
+                      <div v-for="key in 8" :key="key" class="column is-4">
+                        <div class="grid-item">
+                          <VPlaceloadAvatar size="big" centered class="mb-2" />
+
+                          <VPlaceloadText class="mb-4" width="80%" :lines="3" last-line-width="60%" centered />
+
+                          <div class="people">
+                            <VPlaceloadAvatar size="small" class="mx-1" />
+                            <VPlaceloadAvatar size="small" class="mx-1" />
+                            <VPlaceloadAvatar size="small" class="mx-1" />
+                            <VPlaceloadAvatar size="small" class="mx-1" />
+                          </div>
+
+                          <VButtons>
+                            <VButton placeload="100%" dark-outlined>loading ...</VButton>
+                            <VButton placeload="100%" dark-outlined>loading ...</VButton>
+                          </VButtons>
+                        </div>
+                      </div>
+                    </div>
+
+                    <VPlaceholderPage v-else-if="ds_RESERVASI.length === 0" :title="H.assets().notFound"
+                      :subtitle="H.assets().notFoundSubtitle" larger>
+                      <template #image>
+                        <img class="light-image" :src="H.assets().iconNotFound_rev" alt="" />
+                        <img class="dark-image" src="/@src/assets/illustrations/placeholders/search-4-dark.svg" alt="" />
+                      </template>
+                    </VPlaceholderPage>
+
+                    <TransitionGroup name="list" tag="div" class="columns is-multiline"
+                      v-else-if="ds_RESERVASI.length > 0">
+
+                      <div v-for="item in ds_RESERVASI" :key="item.id" class="column is-4">
+                        <div class="grid-item-wrap is-clickable">
+                          <!-- @click="clickCard(item)" -->
+                          <div :class="'grid-item-head ' + (
+                            item.isconfirm != null ? 'is-registrasi' : ''
+                          )">
+                            <div class="flex-head">
+                              <div class="meta">
+                                <span v-if="item.isconfirm != null" class="dark-inverted">
+                                  {{ item.namaruangan }}
+                                </span>
+
+                                <span v-if="item.isconfirm == null" class="dark-inverted">
+                                  {{ item.namaruangan }}
+                                </span>
+                                <span>
+                                  {{
+                                    item.isconfirm == null || item.ismobilejkn == true
+                                    ? 'No Reservasi - ' + item.noreservasi
+                                    : H.formatDateIndoSimple(item.tanggalreservasi)
+                                  }}
+                                </span>
+                              </div>
+                              <div v-if="item.isconfirm != null" class="status-icon " style="background-color: white;">
+                                <i aria-hidden="true" class="fas fa-check " style="color:var(--success)"></i>
+                              </div>
+                              <div v-if="item.isconfirm == null" class="status-icon is-danger">
+                                <i aria-hidden="true" class="fas fa-times"></i>
+                              </div>
+                            </div>
+
+                          </div>
+                          <div class="grid-item">
+                            <VAvatar :picture="(item.foto != null ? item.foto : '/images/other/no_image.jpg')" :badge="(item.jeniskelamin == 'LAKI-LAKI' ? '/images/other/male.png'
+                              : '/images/other/female.png')" size="big" />
+                            <h3 class="dark-inverted">{{ item.namapasien }}</h3>
+                            <!-- <p>{{ item.nocm }}</p> -->
+                            <p>No RM : {{ item.nocm }}</p>
+                            <p>No BPJS : {{ item.nobpjs }}</p>
+                            <p>NIK : {{ item.noidentitas }}</p>
+                            <div class="people">
+                              <VSnack
+                                :title="(item.isconfirm != null ? item.dokter : H.formatDateIndoSimple(item.tanggalreservasi))"
+                                color="info" :icon="(item.isconfirm != null ? 'fa:user-md' : 'feather:calendar')">
+                                <i class="iconify" data-icon="feather:plus"></i>
+                              </VSnack>
+                            </div>
+                            <div class="buttons">
+                              <button class="button v-button is-success" @click="emr(item)"
+                                v-if="item.isconfirm != null && item.ismobilejkn != true" style="width:100%">
+                                <span class="icon" style="color:white">
+                                  <i aria-hidden="true" class="iconify" data-icon="feather:user"></i>
+                                </span>
+                                <span style="color:white">Profile</span>
+                              </button>
+                              <button class="button v-button is-success" @click="emr(item)"
+                                v-if="item.ischeckin == true && item.ismobilejkn == true" style="width:100%">
+                                <span class="icon" style="color:white">
+                                  <i aria-hidden="true" class="iconify" data-icon="feather:user"></i>
+                                </span>
+                                <span style="color:white">Profile</span>
+                              </button>
+                              <button class="button v-button is-dark-outlined" @click="confirmReservasi(item)"
+                                v-if="item.isconfirm == null && item.ismobilejkn != true">
+                                <span class="icon">
+                                  <i aria-hidden="true" class="iconify" data-icon="feather:arrow-right"></i>
+                                </span>
+                                <span>Confirm</span>
+                              </button>
+                              <button class="button v-button is-dark-outlined" @click="hapusReservasi(item)"
+                                v-if="item.isconfirm == null && item.ismobilejkn != true">
+                                <span class="icon">
+                                  <i aria-hidden="true" class="iconify" data-icon="feather:trash"></i>
+                                </span>
+                                <span>Batal</span>
+                              </button>
+                              <button class="button v-button is-dark-outlined" @click="checkinJKN(item)"
+                                :loading="isLoading" v-if="item.ischeckin != true && item.ismobilejkn == true">
+                                <span class="icon">
+                                  <i aria-hidden="true" class="iconify" data-icon="feather:arrow-right"></i>
+                                </span>
+                                <span>Check In</span>
+                              </button>
+                              <button class="button v-button is-dark-outlined" @click="batalJKN(item)"
+                                :loading="isLoading" v-if="item.ischeckin != true && item.ismobilejkn == true">
+                                <span class="icon">
+                                  <i aria-hidden="true" class="iconify" data-icon="feather:trash"></i>
+                                </span>
+                                <span>Batal</span>
+                              </button>
+
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </TransitionGroup>
+                  </div>
+
+                  <div class="list-view list-view-v1" v-else-if="selectView == 'list'">
+
+                    <VPlaceholderPage v-if="ds_RESERVASI.length === 0" title="We couldn't find any matching results."
+                      subtitle="Too bad. Looks like we couldn't find any matching results for the
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                search terms you've entered. Please try different search terms or
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                criteria."
+                      larger>
+                      <template #image>
+                        <img class="light-image" src="/@src/assets/illustrations/placeholders/search-1.svg" alt="" />
+                        <img class="dark-image" src="/@src/assets/illustrations/placeholders/search-1-dark.svg" alt="" />
+                      </template>
+                    </VPlaceholderPage>
+
+                    <div class="list-view-inner" v-else-if="ds_RESERVASI.length > 0">
+
+                      <TransitionGroup name="list-complete" tag="div">
+                        <div v-for="(item, key) in ds_RESERVASI" :key="key" class="list-view-item">
+                          <div class="list-view-item-inner is-clickable">
+                            <VAvatar :picture="(item.foto != null ? item.foto : '/images/other/no_image.jpg')" :badge="(item.jeniskelamin == 'LAKI-LAKI' ? '/images/other/male.png'
+                              : '/images/other/female.png')" size="large" />
+                            <div class="meta-left">
+                              <h3>{{ item.namapasien }}</h3>
+                              <span>
+                                <i aria-hidden="true" class="iconify" data-icon="fa:address-card"></i>
+                                <span class="ml-1 mt-1">{{ item.noidentitas }}</span>
+                              </span>
+                              <div class="icon-list">
+                                <span>
+                                  <i aria-hidden="true" class="lnil lnil-cardiology fs-1"></i>
+                                  <span class="fs-1">{{ item.tgllahir }}</span>
+                                </span>
+                                <span>
+                                  <i aria-hidden="true"
+                                    class="lnil
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         lnil-sort fs-1"></i>
+                                  <span class="fs-1">{{ item.umur }}</span>
+                                </span>
+                                <span>
+                                  <i aria-hidden="true" class="lnil lnil-map fs-1"></i>
+                                  <span class="fs-1">{{ item.alamatlengkap }}</span>
+                                </span>
+
+                              </div>
+                            </div>
+                            <div class="meta-right">
+                              <div class="tags">
+                                <VTag :label="item.isconfirm != null ? item.namaruangan : 'Belum Registrasi'"
+                                  :color="item.isconfirm != null ? 'success' : 'danger'" rounded elevated
+                                  v-tooltip.left="item.isconfirm != null ? item.namaruangan : 'Belum Registrasi'" />
+                                <VTag v-if="item.isconfirm != null"
+                                  :label="H.formatDate(item.tglregistrasi, 'YYYY-MM-DD')" :color="'success'" rounded
+                                  elevated class="mt-1" />
+                              </div>
+
+                              <!-- <div class="stats">
+                                <div class="stat">
+                                  <span>{{ item.nocm }}</span>
+                                  <span>No RM</span>
+                                </div>
+                                <div class="separator"></div>
+                                <div class="stat">
+                                  <span>{{ item.nohp ? item.nohp : '0000000000000'
+                                  }}</span>
+                                  <span>No HP</span>
+                                </div>
+                                <div class="separator"></div>
+                                <div class="stat">
+                                  <span>{{ item.jeniskelamin }}</span>
+                                  <span>JK</span>
+                                </div>
+                              </div> -->
+
+                              <div class="columns is-multiline">
+                                <div class="column is-12">
+                                  <div class="stats">
+                                    <div class="stat">
+                                      <span>{{ item.nocm }}</span>
+                                      <span>No RM</span>
+                                    </div>
+                                    <div class="separator"></div>
+                                    <div class="stat">
+                                      <span>{{ item.noreservasi }}</span>
+                                      <span>No Reservasi</span>
+                                    </div>
+                                    <div class="separator"></div>
+                                    <div class="stat">
+                                      <span>{{ item.nohp ? item.nohp : '0000000000000'
+                                      }}</span>
+                                      <span>No HP</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div class="column is-12">
+                                  <div class="stats">
+                                    <div class="stat">
+                                      <span>{{ item.nobpjs }}</span>
+                                      <span>No BPJS</span>
+                                    </div>
+                                    <div class="separator"></div>
+                                    <div class="stat">
+                                      <span>{{ item.jeniskelamin }}</span>
+                                      <span>JK</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <VDropdown icon="feather:more-vertical" spaced right>
+                              <template #content>
+                                <a role="menuitem" @click="emr(item)" class="dropdown-item is-media">
+                                  <div class="icon">
+                                    <i aria-hidden="true" class="lnil lnil-user-alt"></i>
+                                  </div>
+                                  <div class="meta">
+                                    <span>Profile</span>
+                                    <span>lihat profile</span>
+                                  </div>
+                                </a>
+
+                                <a v-if="item.isconfirm == null" role="menuitem" @click="confirmReservasi(item)"
+                                  class="dropdown-item is-media">
+                                  <div class="icon">
+                                    <i aria-hidden="true" class="lnil lnil-pointer"></i>
+                                  </div>
+                                  <div class="meta">
+                                    <span>Confirm</span>
+                                    <span>Check-In reservasi</span>
+                                  </div>
+                                </a>
+                                <a v-else-if="item.isconfirm != null" role="menuitem" @click="hapusReservasi(item)"
+                                  class="dropdown-item is-media">
+                                  <div class="icon">
+                                    <i aria-hidden="true" class="lnil lnil-medical-sign"></i>
+                                  </div>
+                                  <div class="meta">
+                                    <span>Batal</span>
+                                    <span>Hapus Reservasi</span>
+                                  </div>
+                                </a>
+                              </template>
+                            </VDropdown>
+                          </div>
+                        </div>
+                      </TransitionGroup>
+                    </div>
+                  </div>
+
+                  <VFlexPagination v-model:current-page="currentPageReservation.page"
+                    :item-per-page="currentPageReservation.limit"
+                    :total-items="ds_RESERVASI.total < 5 ? ds_RESERVASI.total : 50" :max-links-displayed="5">
+                    <template #before-pagination>
+                    </template>
+                    <template #before-navigation>
+                      <VFlex class="mr-4 mt-1" column-gap="1rem">
+                        <VField>
+
+                        </VField>
+                        <VField>
+                          <VControl>
+                            <div class="select is-rounded">
+                              <select v-model="currentPageReservation.limit">
+                                <option :value="3">3 results per page</option>
+                                <option :value="5">5 results per page</option>
+                                <option :value="6">6 results per page</option>
+                                <option :value="10">10 results per page</option>
+                                <option :value="15">15 results per page</option>
+                                <option :value="25">25 results per page</option>
+                                <option :value="50">50 results per page</option>
+                              </select>
+                            </div>
+                          </VControl>
+                        </VField>
+                      </VFlex>
+                    </template>
+                  </VFlexPagination>
+                </div>
+
+              </div>
+            </VCard>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <VModal :open="modalFilter" title=" Periode" :noclose="false" size="small" actions="right" @close="modalFilter = false">
+    <template #content>
+      <form class="modal-form">
+        <div class="columns">
+          <div class="column is-12" style="text-align: center">
+            <VField class="is-centered">
+              <v-date-picker v-model="item.filterDate" class="is-centered" trim-weeks :max-date="new Date()" />
+            </VField>
+          </div>
+        </div>
+      </form>
+    </template>
+    <template #action>
+      <VButton icon="feather:search" @click="reload()" :loading="isLoading" color="primary" raised>
+        Filter</VButton>
+    </template>
+  </VModal>
+
+  <VModal :open="modalBatalRegis" title="Batal Registrasi" size="medium" actions="right" @close="modalBatalRegis = false"
+    cancelLabel="Tutup">
+    <template #content>
+      <div class="columns is-multiline">
+        <div class="column is-6">
+          <VField>
+            <VLabel class="required-field">Tanggal Batal</VLabel>
+            <VDatePicker v-model="item.tanggalpembatalan" mode="dateTime" style="width: 100%" trim-weeks
+              :max-date="new Date()">
+              <template #default="{ inputValue, inputEvents }">
+                <VField>
+                  <VControl icon="feather:calendar" fullwidth>
+                    <VInput :value="inputValue" placeholder="Tanggal" v-on="inputEvents" disabled />
+                  </VControl>
+                </VField>
+              </template>
+            </VDatePicker>
+          </VField>
+        </div>
+        <div class="column is-6">
+          <VField>
+            <VLabel class="required-field">Ruangan</VLabel>
+            <VControl icon="feather:map-pin">
+              <VInput type="text" v-model="item.ruangan" placeholder="Tempat Lahir" class="is-rounded_Z" disabled />
+            </VControl>
+          </VField>
+        </div>
+        <div class="column is-12">
+          <span style="margin-bottom:1rem;font-weight: bold; font-size: 12px; font-family: var(--font-alt);">Alasan
+            Pembatalan
+          </span>
+
+          <VField>
+            <VControl>
+              <VTextarea class="textarea is-rounded" v-model="item.alasanpembatalan" rows="4"
+                placeholder="Alasan Pembatalan" autocomplete="off" autocapitalize="off" spellcheck="true" />
+            </VControl>
+          </VField>
+        </div>
+
+      </div>
+    </template>
+    <template #action>
+      <VButton icon="feather:plus" color="primary" @click="saveBatalRegis" :loading="isLoading" raised>Simpan
+      </VButton>
+    </template>
+  </VModal>
+
+  <VModal :open="modalGabungRM" title="Penggabungan Duplikasi No RM" :noclose="false" size="large" actions="right"
+    @close="modalGabungRM = false">
+    <template #content>
+      <form class="modal-form">
+        <div class="column">
+          <div class="columns is-multiline">
+            <div class="column is-3">
+              <VField>
+                <VLabel>No RM</VLabel>
+                <VControl>
+                  <VInput type="text" v-model="item.normAsal" class="is-rounded_Z" disabled />
+                </VControl>
+              </VField>
+            </div>
+            <div class="column is-6">
+              <VField>
+                <VLabel>Nama Pasien</VLabel>
+                <VControl>
+                  <VInput type="text" v-model="item.namaPasien" class="is-rounded_Z" disabled />
+                </VControl>
+              </VField>
+            </div>
+            <div class="column is-3">
+              <VField>
+                <VLabel class="required-field">Gabung Ke</VLabel>
+                <VControl>
+                  <VInput type="text" v-model="item.normTujuan" class="is-rounded_Z" />
+                </VControl>
+              </VField>
+            </div>
+          </div>
+        </div>
+      </form>
+    </template>
+    <template #action>
+      <VButton icon="feather:save" @click="saveGabungRM(item)" :loading="isLoading" color="primary" raised>
+        Simpan</VButton>
+    </template>
+  </VModal>
+
+  <VModal :open="modalRegisRanap" title="Surat Registrasi Ranap" :noclose="false" size="small" actions="right"
+    @close="modalRegisRanap = false">
+    <template #content>
+      <form class="modal-form">
+        <div class="column is-12">
+          <VField>
+            <VLabel class="">Bahasa yang digunakan</VLabel>
+            <VControl>
+              <VInput type="text" v-model="item.bahasaDipakai" class="is-rounded_Z" />
+            </VControl>
+          </VField>
+        </div>
+        <div class="column is-12">
+          <VField>
+            <VLabel class="">Perlu Penerjemah</VLabel>
+            <VControl>
+              <VInput type="text" v-model="item.bantuanPenerjemah" class="is-rounded_Z" />
+            </VControl>
+          </VField>
+        </div>
+
+        <div class="column is-12 pt-3">
+          <div class="column p-0 pb-3">
+            <label
+              style="font-family: var(--font);font-size: 0.9rem;color: var(--light-text) !important;font-weight: 400;">Perlu
+              bimbingan rohani selama dirawat</label>
+          </div>
+
+          <div class="columns is-multiline pl-4 pr-4 pt-2">
+            <div class="column is-4 p-0">
+              <VField>
+                <VControl raw subcontrol>
+                  <VCheckbox v-model="item.bantuanPelayanan" class="p-0" true-value="Ya" label="Ya" color="primary"
+                    circle />
+                </VControl>
+              </VField>
+            </div>
+            <div class="column p-0">
+              <VField>
+                <VControl raw subcontrol>
+                  <VCheckbox v-model="item.bantuanPelayanan" class="p-0" true-value="Tidak" label="Tidak" color="primary"
+                    circle />
+                </VControl>
+              </VField>
+            </div>
+          </div>
+        </div>
+
+        <div class="column is-12 pt-3">
+          <div class="column p-0 pb-3">
+            <label
+              style="font-family: var(--font);font-size: 0.9rem;color: var(--light-text) !important;font-weight: 400;">Keinginan
+              untuk dikunjungi oleh orang tua</label>
+          </div>
+
+          <div class="columns is-multiline pl-4 pr-4 pt-2">
+            <div class="column is-4 p-0">
+              <VField>
+                <VControl raw subcontrol>
+                  <VCheckbox v-model="item.dikunjungi" class="p-0" true-value="Ya" label="Ya" color="primary" circle />
+                </VControl>
+              </VField>
+            </div>
+            <div class="column p-0">
+              <VField>
+                <VControl raw subcontrol>
+                  <VCheckbox v-model="item.dikunjungi" class="p-0" true-value="Tidak" label="Tidak" color="primary"
+                    circle />
+                </VControl>
+              </VField>
+            </div>
+          </div>
+        </div>
+
+      </form>
+    </template>
+    <template #action>
+      <VButton icon="feather:save" @click="saveFormCetakRanap(item)" color="primary" :loading="isBtnLoading" raised>
+        Simpan</VButton>
+    </template>
+  </VModal>
+
+      <VModal :open="modalSuratSakit" title="Cetak Surat Keterangan Sakit" :noclose="true" size="small" actions="right"
+      @close="modalSuratSakit = false">
+      <template #content>
+        <form class="modal-form">
+          <div class="column is-12 pl-2 pr-2 pt-0 pb-3">
+            <VField label="Hasil Pemeriksaan">
+              <VControl>
+                <VTextarea rows="2" v-model="item.hasilPeriksa"
+                  placeholder="Karena sakitnya, yang bersangkutan diharapkan" />
+              </VControl>
+            </VField>
+          </div>
+          <div class="column pl-2 pr-2 pt-2 pb-3">
+            <div class="columns is-multiline pl-1 pr-1">
+              <div class="column p-2">
+                <VField label="Tanggal awal">
+                  <VDatePicker v-model="item.tglAwalSakit" mode="date" style="width: 100%" trim-weeks
+                    :max-date="new Date()">
+                    <template #default="{ inputValue, inputEvents }">
+                      <VField>
+                        <VControl icon="feather:calendar" fullwidth>
+                          <VInput :value="inputValue" placeholder="Tanggal" v-on="inputEvents" />
+                        </VControl>
+                      </VField>
+                    </template>
+                  </VDatePicker>
+                </VField>
+              </div>
+              <div class="column p-2">
+                <VField label="Tanggal Akhir">
+                  <VDatePicker v-model="item.tglAkhirSakit" mode="date" style="width: 100%" trim-weeks
+                    :max-date="new Date()">
+                    <template #default="{ inputValue, inputEvents }">
+                      <VField>
+                        <VControl icon="feather:calendar" fullwidth>
+                          <VInput :value="inputValue" placeholder="Tanggal" v-on="inputEvents" />
+                        </VControl>
+                      </VField>
+                    </template>
+                  </VDatePicker>
+                </VField>
+              </div>
+            </div>
+          </div>
+
+          <div class="column is-12 pl-2 pr-2 pt-0 pb-3">
+            <VField label="Catatan">
+              <VControl>
+                <VTextarea rows="2" v-model="item.catatanSakit" />
+              </VControl>
+            </VField>
+          </div>
+          <div class="column is-12 pl-2 pr-2 pt-0 pb-3">
+            <VField label="Diagnosa">
+              <VControl>
+                <VTextarea rows="2" v-model="item.diagnosaSakit" />
+              </VControl>
+            </VField>
+          </div>
+          <div class="column is-12 pl-2 pr-2 pt-0 pb-3">
+            <VField label="Indikasi kembali ke RS">
+              <VControl>
+                <VTextarea rows="2" v-model="item.indikasiKembali" />
+              </VControl>
+            </VField>
+          </div>
+          <div class="column pl-2 pr-2 pt-0 pb-0">
+            <VField label="Kembali ke rs">
+              <VDatePicker v-model="item.tglKembaliRS" mode="date" style="width: 100%" trim-weeks>
+                <template #default="{ inputValue, inputEvents }">
+                  <VField>
+                    <VControl icon="feather:calendar" fullwidth>
+                      <VInput :value="inputValue" placeholder="Tanggal" v-on="inputEvents" />
+                    </VControl>
+                  </VField>
+                </template>
+              </VDatePicker>
+            </VField>
+          </div>
+        </form>
+      </template>
+      <template #action>
+        <VButton @click="saveSKSakit()" :loading="isLoading" color="primary" raised>
+          Simpan</VButton>
+      </template>
+    </VModal>
+
+</template>
+<script setup lang="ts">
+import { useRoute, useRouter } from 'vue-router'
+import { ref, computed, reactive, watch } from 'vue'
+import { useThemeColors } from '/@src/composable/useThemeColors'
+import { useApi } from '/@src/composable/useApi'
+import { useUserSession } from '/@src/stores/userSession'
+import { useHead } from '@vueuse/head'
+import ConfirmDialog from 'primevue/confirmdialog'
+import { useConfirm } from 'primevue/useconfirm'
+import * as H from '/@src/utils/appHelper'
+import { useViewWrapper } from '/@src/stores/viewWrapper'
+import CardCountRev from '/@src/components/partials/widgets/stat/CardCountRev.vue'
+import Calendar from 'primevue/calendar';
+import * as qzService from '/@src/utils/qzTrayService'
+
+useHead({
+  title: 'Dashboard Registrasi ' + import.meta.env.VITE_PROJECT,
+})
+useViewWrapper().setPageTitle(import.meta.env.VITE_PROJECT)
+useViewWrapper().setFullWidth(true)
+
+let chartJK: any = ref({
+  series: [],
+})
+let ID_RUANGAN = useRoute().query.id as string
+let dataDokter: any = ref([])
+let d_Instalasi: any = ref([])
+let d_KelompokPasien: any = ref([])
+let d_Ruangan: any = ref([])
+let isLoading: any = ref(false)
+let modalGabungRM: any = ref(false)
+let ds_RESERVASI: any = ref([])
+let ds_PASIEN: any = ref([])
+isLoading.value = false
+
+const confirm = useConfirm();
+const route = useRoute()
+const router = useRouter()
+const filters = ref('')
+const modalFilter: any = ref(false)
+const modalBatalRegis: any = ref(false)
+const modalRegisRanap: any = ref(false)
+const modalSuratSakit: any = ref(false)
+const themeColors = useThemeColors()
+const userLogin = useUserSession().getUser()
+const checkboxKel: any = ref([])
+const checkboxInst: any = ref([])
+const listChecked: any = ref([])
+const listCheckedInst: any = ref([])
+const HIDE_FILTER: any = ref(false)
+const IS_REGISTRASI: any = ref(true)
+const isBtnLoading: any = ref(false)
+const modelCheck: any = ref([])
+const dataSource: any = ref([])
+const sourceItem = ref([])
+const sourceItemSK = ref([])
+const dataCount: any = ref([])
+const dataDept: any = ref([])
+const detailPasien: any = ref([])
+const isReservasi: any = ref([])
+
+const kelompokUser = useUserSession().getUser().kelompokUser.kelompokUser
+const kelompokUserID = useUserSession().getUser().kelompokUser.id
+const pegawaiId = useUserSession().getUser().pegawai.id
+
+const d_View = [
+  {
+    name: 'Grid View',
+    value: 'grid',
+    icon: 'fas fa-id-card-alt',
+  },
+  {
+    name: 'List View',
+    value: 'list',
+    icon: 'fas fa-list',
+  },
+]
+const selectView: any = ref()
+selectView.value = 'grid'
+
+const currentPage: any = ref({
+  limit: 6,
+  rows: 50,
+})
+const currentPageReservation: any = ref({
+  limit: 6,
+  rows: 50,
+})
+
+currentPage.value.page = computed(() => {
+  try {
+    return Number.parseInt(route.query.page as string) || 1
+  } catch { }
+  return 1
+})
+watch(currentPage.value, () => {
+  fetchPasien()
+})
+currentPageReservation.value.page = computed(() => {
+  try {
+    return Number.parseInt(route.query.page as string) || 1
+  } catch { }
+  return 1
+})
+watch(currentPageReservation.value, () => {
+  fetchReservasi()
+})
+const apd: any = reactive({})
+const item: any = reactive({
+  qAktif: true,
+  tanggalpembatalan: new Date(),
+  filterDate: new Date(),
+  qPeriode: [
+    new Date(),
+    new Date()
+  ],
+  c_antrian: 0,
+  c_dilayani: 0,
+  c_registrasi: 0,
+  c_reservasi: 0,
+})
+let periode = H.cachePeriode().get('periodeRegistrasi')
+let search = H.cacheInput().get('searchRegistrasi')
+if (search) {
+    item.search = search
+}
+if (periode != undefined) {
+  item.qPeriode = [
+    new Date(periode['awal']),
+    new Date(periode['akhir'])
+  ];
+}
+const chart: any = ref({
+  aktif: true
+})
+
+const onPageChange = () => {
+  console.log("successfully", currentPage.value);
+  fetchPasien()
+}
+
+const dataSourcefiltered = computed(() => {
+  if (!filters.value) {
+    return dataDokter.value
+  }
+  return dataDokter.value.filter((item: any) => {
+    return (
+      item.namaruangan.match(new RegExp(filters.value, 'i'))
+    )
+  })
+})
+
+
+const changeView = (e: any) => {
+  selectView.value = e
+}
+const fetchdDropdown = async () => {
+  const response = await useApi().get(`/dashboard/registrasi/dropdown`)
+  d_Ruangan.value = response.ruangan.map((e: any) => { return { label: e.namaruangan, value: e.id, default: e } })
+  d_Instalasi.value = response.departemen.map((e: any) => { return { id: e.id, namadepartemen: e.namadepartemen, count: 0 } })
+  d_KelompokPasien.value = response.kelompokpasien.map((e: any) => { return { id: e.id, kelompokpasien: e.kelompokpasien, count: 0 } })
+  dataDokter.value = response.jadwaldokter
+}
+
+function changeSwitch(e: any) {
+  fetchPasien()
+}
+
+const fetchPasien = async () => {
+
+  ds_PASIEN.value = []
+  ds_PASIEN.value.loading = true
+
+  let limit: any = currentPage.value.limit
+  let offset: any = route.query.page ? route.query.page : 1
+  offset = (offset * limit) - limit
+  let page: any = route.query.page ? route.query.page : 1
+  let namapasien = '', nocm = '', nik = '', nobpjs = '',
+    alamat = '', pasienAktif = '', noregisrasi = '', dari = '',
+    sampai = '', kelompokpasienfk = '', instalasifk = '', ruanganfk = '', search = ''
+  isReservasi.value = false
+  if (item.qnamapasien) namapasien = `&namapasien=${item.qnamapasien}`
+  if (item.qnocm) nocm = `&nocm=${item.qnocm}`
+  if (item.qnoregistrasi) noregisrasi = `&noregisrasi=${item.qnoregistrasi}`
+  if (item.qnik) nik = `&nik=${item.qnik}`
+  if (item.qbpjs) nobpjs = `&bpjs=${item.qbpjs}`
+  if (item.qalamat) alamat = `&alamat=${item.qalamat}`
+  if (item.qAktif) pasienAktif = `&pasien_aktif=${item.qAktif}`
+  if (item.filterRuangan) ruanganfk = `&ruanganfk=${item.filterRuangan}`
+  if (item.search) search = `&search=${item.search}`
+  if (item.qPeriode) {
+    if (item.qPeriode[0]) {
+      dari = H.formatDate(item.qPeriode[0], 'YYYY-MM-DD 00:00')
+    }
+    if (item.qPeriode[1]) {
+      sampai = H.formatDate(item.qPeriode[1], 'YYYY-MM-DD 23:59')
+    } else {
+      sampai = H.formatDate(item.qPeriode[0], 'YYYY-MM-DD 23:59')
+    }
+  }
+  let chacePeriode = { 'awal': dari, 'akhir': sampai }
+  H.cachePeriode().set('periodeRegistrasi', chacePeriode);
+  H.cacheInput().set('searchRegistrasi', item.search);
+  if (listChecked.value) {
+    var a = ""
+    var b = ""
+    for (var i = listChecked.value.length - 1; i >= 0; i--) {
+      var c = listChecked.value[i].id
+      b = "," + c
+      a = a + b
+    }
+    kelompokpasienfk = `&kelompokpasienfk=${a.slice(1, a.length)}`
+  }
+  if (listCheckedInst.value) {
+    var a = ""
+    var b = ""
+    for (var i = listCheckedInst.value.length - 1; i >= 0; i--) {
+      var c = listCheckedInst.value[i].id
+      b = "," + c
+      a = a + b
+    }
+    instalasifk = `&instalasifk=${a.slice(1, a.length)}`
+  }
+
+  isLoading.value = true
+  const response = await useApi().get(`/registrasi/list-pasien-grid?page=${page}&dari=${dari}&sampai=${sampai}&limit=${limit}${namapasien}${nocm}${nik}${noregisrasi}${nobpjs}${alamat}${pasienAktif}${kelompokpasienfk}${instalasifk}${ruanganfk}${search}`)
+  for (let x = 0; x < response.data.length; x++) {
+    const element = response.data[x];
+    let ini = element.namapasien.split(' ')
+    let init = element.namapasien.substr(0, 1)
+    if (ini.length > 1) {
+      init = init + ini[1].substr(0, 1)
+    }
+    element.initials = init
+
+  }
+  for (let y = 0; y < d_KelompokPasien.value.length; y++) {
+    const elementK = d_KelompokPasien.value[y];
+    elementK.count = 0
+    for (let i = 0; i < response.data.length; i++) {
+      const element = response.data[i];
+      if (elementK.id == element.objectkelompokpasienlastfk) {
+        elementK.count = elementK.count + 1
+      }
+    }
+
+  }
+  for (let z = 0; z < d_Instalasi.value.length; z++) {
+    const elementI = d_Instalasi.value[z];
+    elementI.count = 0
+    for (let i = 0; i < response.data.length; i++) {
+      const element = response.data[i];
+      if (elementI.id == element.objectdepartemenfk) {
+        elementI.count = elementI.count + 1
+      }
+    }
+  }
+  ds_PASIEN.value.loading = false
+  ds_PASIEN.value = response.data
+  ds_PASIEN.value.total = response.total
+  isLoading.value = false
+  dataSource.value = response.data;
+
+  await countData ()
+}
+const fetchReservasi = async () => {
+  ds_RESERVASI.value = []
+  ds_RESERVASI.value.loading = true
+
+  let limit: any = currentPageReservation.value.limit
+  let offset: any = route.query.page ? route.query.page : 1
+  offset = (offset * limit) - limit
+  let namapasien = '', nocm = '', nik = '', nobpjs = '',
+    alamat = '', pasienAktif = '', noregisrasi = '', dari = '',
+    sampai = '', kelompokpasienfk = '', instalasifk = '', ruanganfk = '', search = ''
+  isReservasi.value = true
+  if (item.qnamapasien) namapasien = `&namapasien=${item.qnamapasien}`
+  if (item.qnocm) nocm = `&nocm=${item.qnocm}`
+  if (item.qnoregistrasi) noregisrasi = `&noregisrasi=${item.qnoregistrasi}`
+  if (item.qnik) nik = `&nik=${item.qnik}`
+  if (item.qbpjs) nobpjs = `&bpjs=${item.qbpjs}`
+  if (item.qalamat) alamat = `&alamat=${item.qalamat}`
+  if (item.qAktif) pasienAktif = `&pasien_aktif=${item.qAktif}`
+  if (item.filterRuangan) ruanganfk = `&ruanganfk=${item.filterRuangan}`
+  if (item.qsearch) search = `&search=${item.qsearch}`
+  if (item.qPeriode) {
+    if (item.qPeriode[0]) {
+      dari = H.formatDate(item.qPeriode[0], 'YYYY-MM-DD 00:00')
+    }
+    if (item.qPeriode[1]) {
+      sampai = H.formatDate(item.qPeriode[1], 'YYYY-MM-DD 23:59')
+    } else {
+      sampai = H.formatDate(item.qPeriode[0], 'YYYY-MM-DD 23:59')
+    }
+  }
+  if (listChecked.value) {
+    var a = ""
+    var b = ""
+    for (var i = listChecked.value.length - 1; i >= 0; i--) {
+      var c = listChecked.value[i].id
+      b = "," + c
+      a = a + b
+    }
+    kelompokpasienfk = `&kelompokpasienfk=${a.slice(1, a.length)}`
+  }
+  if (listCheckedInst.value) {
+    var a = ""
+    var b = ""
+    for (var i = listCheckedInst.value.length - 1; i >= 0; i--) {
+      var c = listCheckedInst.value[i].id
+      b = "," + c
+      a = a + b
+    }
+    instalasifk = `&instalasifk=${a.slice(1, a.length)}`
+  }
+
+  isLoading.value = true
+  const response = await useApi().get(`/dashboard/registrasi/list-pasien-reservasi?_total=true&dari=${dari}&sampai=${sampai}&offset=${offset}&limit=${limit}&rows=${currentPage.value.rows}${namapasien}${nocm}${nik}${noregisrasi}${nobpjs}${alamat}${pasienAktif}${kelompokpasienfk}${instalasifk}${ruanganfk}${search}`)
+  for (let x = 0; x < response.data.length; x++) {
+    const element = response.data[x];
+    let ini = element.namapasien.split(' ')
+    let init = element.namapasien.substr(0, 1)
+    if (ini.length > 1) {
+      init = init + ini[1].substr(0, 1)
+    }
+    element.initials = init
+
+  }
+  for (let y = 0; y < d_KelompokPasien.value.length; y++) {
+    const elementK = d_KelompokPasien.value[y];
+    elementK.count = 0
+    for (let i = 0; i < response.data.length; i++) {
+      const element = response.data[i];
+      if (elementK.id == element.objectkelompokpasienlastfk) {
+        elementK.count = elementK.count + 1
+      }
+    }
+
+  }
+  for (let z = 0; z < d_Instalasi.value.length; z++) {
+    const elementI = d_Instalasi.value[z];
+    elementI.count = 0
+    for (let i = 0; i < response.data.length; i++) {
+      const element = response.data[i];
+      if (elementI.id == element.objectdepartemenfk) {
+        elementI.count = elementI.count + 1
+      }
+    }
+
+  }
+  ds_RESERVASI.value.loading = false
+  ds_RESERVASI.value = response.data
+  ds_RESERVASI.value.total = response.total
+  isLoading.value = false
+}
+
+const filter = () => {
+  fetchPasien()
+}
+const clickKelompok = () => {
+  let objectK = Object.keys(checkboxKel.value)
+  for (let x = 0; x < objectK.length; x++) {
+    const element = objectK[x];
+    if (checkboxKel.value[element] == true) {
+      for (var i = 0; i < d_KelompokPasien.value.length; i++) {
+        const element2 = d_KelompokPasien.value[i];
+        if (element2.id == element) {
+          for (var z = 0; z < listChecked.value.length; z++) {
+            const element3 = listChecked.value[z];
+            if (element3.id == element2.id) {
+              listChecked.value.splice(z, 1)
+            }
+          }
+          listChecked.value.push(element2)
+        }
+      }
+    } else {
+      for (var i = 0; i < d_KelompokPasien.value.length; i++) {
+        const element2 = d_KelompokPasien.value[i];
+        if (element2.id == element) {
+          for (var z = 0; z < listChecked.value.length; z++) {
+            const element3 = listChecked.value[z];
+            if (element3.id == element2.id) {
+              listChecked.value.splice(z, 1)
+            }
+          }
+        }
+      }
+    }
+  }
+  fetchPasien()
+}
+const cari = () => {
+  if (IS_REGISTRASI.value) {
+    fetchPasien()
+  } else {
+    fetchReservasi()
+  }
+}
+
+const clickInstalasi = () => {
+  let objectK = Object.keys(checkboxInst.value)
+  for (let x = 0; x < objectK.length; x++) {
+    const element = objectK[x];
+    if (checkboxInst.value[element] == true) {
+      for (var i = 0; i < d_Instalasi.value.length; i++) {
+        const element2 = d_Instalasi.value[i];
+        if (element2.id == element) {
+          for (var z = 0; z < listCheckedInst.value.length; z++) {
+            const element3 = listCheckedInst.value[z];
+            if (element3.id == element2.id) {
+              listCheckedInst.value.splice(z, 1)
+            }
+          }
+          listCheckedInst.value.push(element2)
+        }
+      }
+    } else {
+      for (var i = 0; i < d_Instalasi.value.length; i++) {
+        const element2 = d_Instalasi.value[i];
+        if (element2.id == element) {
+          for (var z = 0; z < listCheckedInst.value.length; z++) {
+            const element3 = listCheckedInst.value[z];
+            if (element3.id == element2.id) {
+              listCheckedInst.value.splice(z, 1)
+            }
+          }
+        }
+      }
+    }
+  }
+  fetchPasien()
+}
+const changeRuang = (e: any) => {
+  if (IS_REGISTRASI.value) {
+    fetchPasien()
+  } else {
+    fetchReservasi()
+  }
+}
+const reload = () => {
+  fetchDashboard()
+}
+const fetchDashboard = async () => {
+  let ruanganfk = ''
+  if (item.filterRuangan) {
+    ruanganfk = item.filterRuangan
+  }
+  let tgl = ''
+  if (item.filterDate) {
+    tgl = H.formatDate(item.filterDate, 'YYYY-MM-DD')
+  }
+
+  isLoading.value = true
+  const response = await useApi().get(`/dashboard/registrasi?ruanganfk=${ruanganfk}&tgl=${tgl}`)
+  item.c_antrian = response.c_antrian
+  item.c_dilayani = response.c_dilayani
+  item.c_registrasi = response.c_registrasi
+  item.c_reservasi = response.c_reservasi
+  isLoading.value = false
+  modalFilter.value = false
+
+}
+
+const pasienBaru = () => {
+  router.push({
+    name: 'module-registrasi-pasien-baru',
+  })
+}
+
+const registrasi = (e: any) => {
+  router.push({
+    name: 'module-registrasi-registrasi-ruangan',
+    query: {
+      nocmfk: e.nocmfk,
+    },
+  })
+}
+const emr = (e: any) => {
+  H.checkAksesEMR(e,kelompokUser,kelompokUserID,pegawaiId)
+  H.cacheHelper().set('xxx_cache_menu', undefined)
+  router.push({
+    name: 'module-emr-profile-pasien',
+    query: {
+      nocmfk: e.nocmfk,
+      norec_pd: e.norec_pd,
+    },
+  })
+}
+
+const saveSKSakit = async () => {
+  isLoading.value = true
+  let objSave = {
+    "norec": sourceItemSK.value.norec,
+    "norec_pd": sourceItem.value.norec_pd,
+    "dokterfk": sourceItem.value.objectpegawaifk,
+    "tglijinawal": item.tglAwalSakit,
+    "tglijinakhir": item.tglAkhirSakit,
+    "keterangan": item.catatanSakit,
+    "indikasi": item.indikasiKembali,
+    "hasilpemeriksaan": item.hasilPeriksa,
+    "diagnosa": item.diagnosaSakit,
+    "tglkontrol": item.tglKembaliRS,
+  }
+  await useApi().post('dashboard/save-surat-keterangan-sakit', objSave).then((response) => {
+    isLoading.value = false
+    modalSuratSakit.value = false
+  })
+  H.printBlade('report/ranap/cetak-surat-sakit?noregistrasi=' + sourceItem.value.noregistrasi)
+}
+
+
+const showModalSKSakit = async (e: any) => {
+  sourceItem.value = e
+  await useApi().get('dashboard/get-data-surat-keterangan?norec_pd=' + e.norec_pd + '&jenissurat=' + 'SuratKeteranganSakit').then((response) => {
+    modalSuratSakit.value = true
+    item.tglAwalSakit = response.tglawal ? response.tglawal : ''
+    item.tglAkhirSakit = response.tglakhir ? response.tglakhir : ''
+    item.tglKembaliRS = response.tglkontrol ? response.tglkontrol : ''
+    item.diagnosaSakit = response.diagnosa ? response.diagnosa : ''
+    item.hasilPeriksa = response.hasilpemeriksaan ? response.hasilpemeriksaan : ''
+    item.indikasiKembali = response.indikasi ? response.indikasi : ''
+    item.catatanSakit = response.keterangan ? response.keterangan : ''
+    sourceItemSK.value = response
+  })
+}
+
+const hapusReservasi = (e: any) => {
+  useApi().post(
+    `/dashboard/registrasi/hapus-reservasi`, { norec: e.norec }).then((response: any) => {
+      fetchReservasi()
+    })
+}
+const confirmReservasi = (e: any) => {
+   if (e.nocm == null) {
+    router.push({
+      name: 'module-registrasi-pasien-baru',
+      query: {
+        namapasien: e.namapasien,
+        notelepon: e.notelepon,
+        objectjeniskelaminfk: e.objectjeniskelaminfk,
+        tgllahir: e.tgllahir,
+        nocmfk: e.nocmfk,
+        noreservasi: e.noreservasi,
+        norec_online: e.norec,
+        tanggalreservasi: e.tanggalreservasi,
+        ruangan: e.objectruanganfk,
+        dokter: e.objectpegawaifk,
+        dokter_name: e.dokter,
+        kelompok: e.objectkelompokpasienfk,
+        noidentitas : e.nik,
+        isReservasi : 'true'
+      },
+    })
+  } else {
+    router.push({
+      name: 'module-registrasi-registrasi-ruangan',
+      query: {
+        nocmfk: e.nocmfk,
+        noreservasi: e.noreservasi,
+        norec_online: e.norec,
+        tanggalreservasi: e.tanggalreservasi,
+        ruangan: e.objectruanganfk,
+        dokter: e.objectpegawaifk,
+        dokter_name: e.dokter,
+        kelompok: e.objectkelompokpasienfk,
+      },
+    })
+  }
+}
+
+const mutasiPasien = (e: any) => {
+  router.push({
+    name: 'module-registrasi-mutasi-pasien',
+    query: {
+      nocmfk: e.nocmfk,
+      norec_pd: e.norec_pd,
+    }
+  })
+}
+
+
+const changeReservasi = (e: any) => {
+  IS_REGISTRASI.value = e
+  if (IS_REGISTRASI.value) {
+    fetchPasien()
+  } else {
+    fetchReservasi()
+  }
+}
+
+const getAPD = async (e: any)=> {
+  let resp = await useApi().get(`/dashboard/get-norecapd?norec_pd=${e.norec_pd}&objectruanganlastfk=${e.objectruanganlastfk}`)
+  return resp.norec_apd
+}
+
+
+const editRegistrasi = async(e: any) => {
+  let apd = await getAPD(e);
+
+  router.push({
+    name: 'module-registrasi-registrasi-ruangan',
+    query: {
+      nocmfk: e.nocmfk,
+      norec_pd: e.norec_pd,
+      norec_apd: apd,
+    },
+  })
+}
+const cetakSEP = (e: any) => {
+  H.printBlade('registrasi/pemakaian-asuransi/sep?noregistrasi=' + e.noregistrasi + "&pdf=false")
+  // qzService.printData('registrasi/pemakaian-asuransi/sep?noregistrasi=' + e.noregistrasi + "&pdf=true", 'SEP', 1)
+}
+
+const cetakLabel = async (e: any) => {
+  qzService.printData(`dashboard/registrasi/cetak-label-pasien?pdf=true&noregistrasi=${e.noregistrasi}`, 'LABEL PASIEN', 1)
+  // H.printBlade(`dashboard/registrasi/cetak-label-pasien?pdf=true&noregistrasi=${e.noregistrasi}`)
+}
+const cetakIdentitas = async (e: any) => {
+  qzService.printData(`dashboard/registrasi/cetak-identitas-pasien?pdf=true&noregistrasi=${e.noregistrasi}`, 'LABEL PASIEN', 1)
+  // H.printBlade(`dashboard/registrasi/cetak-label-pasien?pdf=true&noregistrasi=${e.noregistrasi}`)
+}
+const cetakLabelODC = async (e: any) => {
+  qzService.printData(`dashboard/registrasi/cetak-label-odc?pdf=true&noregistrasi=${e.noregistrasi}`, 'LABEL PASIEN', 1)
+  // H.printBlade(`dashboard/registrasi/cetak-label-pasien?pdf=true&noregistrasi=${e.noregistrasi}`)
+}
+
+const cetakkartuPasien = async (e: any) => {
+  qzService.printData(`dashboard/registrasi/cetak-kartu-pasien?pdf=true&noregistrasi=${e.noregistrasi}`,
+    'KARTU PASIEN', 1)
+}
+
+const cetakSuratKeteranganDokter = async (e: any) => {
+
+  let dokter = `&dokter=${e.dokter}`
+  let kelompokpasien = `&kelompokpasien=${e.kelompokpasien}`
+  let objectdepartemenfk = `&objectdepartemenfk=${e.objectdepartemenfk}`
+  let tglregistrasi = `&tglregistrasi=${e.tglregistrasi}`
+  let norec_pd = `&norec_pd=${e.norec_pd}`
+  H.printBlade(`dashboard/registrasi/cetak-surat-keterangan-dokter?noregistrasi=${e.noregistrasi}${dokter}${kelompokpasien}${objectdepartemenfk}${tglregistrasi}${norec_pd}`);
+}
+
+const cetakSuratKeteranganKeluar = async (e: any) => {
+
+  let dokter = `&dokter=${e.dokter}`
+  let kelompokpasien = `&kelompokpasien=${e.kelompokpasien}`
+  let objectdepartemenfk = `&objectdepartemenfk=${e.objectdepartemenfk}`
+  let tglregistrasi = `&tglregistrasi=${e.tglregistrasi}`
+  let norec_pd = `&norec_pd=${e.norec_pd}`
+  H.printBlade(`dashboard/registrasi/cetak-surat-keterangan-keluar?noregistrasi=${e.noregistrasi}${dokter}${kelompokpasien}${objectdepartemenfk}${tglregistrasi}${norec_pd}`);
+}
+
+// const cetakBillingBpjs = async (e: any) => {
+
+//     console.log(e)
+
+//     let dokter = `&dokter=${e.dokter}`
+//     let kelompokpasien = `&kelompokpasien=${e.kelompokpasien}`
+//     let objectdepartemenfk = `&objectdepartemenfk=${e.objectdepartemenfk}`
+//     let tglregistrasi = `&tglregistrasi=${e.tglregistrasi}`
+//     let norec_pd = `&norec_pd=${e.norec_pd}`
+//     H.printBlade(`dashboard/registrasi/cetak-billing-bpjs?noregistrasi=${e.noregistrasi}${dokter}${kelompokpasien}${objectdepartemenfk}${tglregistrasi}${norec_pd}`);
+// }
+
+const detailRegistrasi = async(e: any) => {
+  let apd = await getAPD(e);
+
+  router.push({
+    name: 'module-registrasi-detail-registrasi',
+    query: {
+      noregistrasi: e.noregistrasi,
+      norec_pd: e.norec_pd,
+      norec_apd: apd,
+    },
+  })
+}
+
+const asuransi = (e: any) => {
+  router.push({
+    name: 'module-registrasi-pemakaian-asuransi',
+    query: {
+      norec_pd: e.norec_pd,
+      nocmfk: e.nocmfk,
+    }
+  })
+}
+
+const cetakBuktiPendaftaran = (e: any) => {
+  qzService.printData(`report/bukti-pendaftaran?pdf=true&noregistrasi=${e.noregistrasi}`,
+    'ANTRIAN POLI', 1)
+}
+
+const batalRegis = async (e: any) => {
+  let apd = await getAPD(e);
+
+  item.ruangan = e.namaruangan
+  item.norec_pd = e.norec_pd
+  item.norec_apd = apd
+  item.nocm = e.nocm,
+  item.noregistrasi = e.noregistrasi,
+  item.namapasien = e.namapasien
+
+  modalBatalRegis.value = true
+}
+
+const saveBatalRegis = async () => {
+  if (!item.alasanpembatalan) { H.alert('warning', 'Alasan Pembatalan harus di isi'); return }
+  let json = {
+    pasiendaftar: {
+      'norec_pd': item.norec_pd,
+      'tanggalpembatalan': item.tanggalpembatalan,
+      'alasanpembatalan': item.alasanpembatalan,
+      'ruangan': item.ruangan,
+      'nocm': item.nocm,
+      'namapasien': item.namapasien,
+      'noregistrasi': item.noregistrasi
+    },
+    antrianpasiendiperiksa: {
+      'norec_apd': item.norec_apd,
+    }
+  }
+  isLoading.value = true
+  await useApi()
+    .post(`/dashboard/save-batal-registrasi`, json)
+    .then((response: any) => {
+      isLoading.value = false
+      clear()
+      fetchPasien()
+    })
+    .catch((e: any) => {
+      isLoading.value = false
+    })
+}
+
+const saveGabungRM = async (e: any) => {
+  if (!e.normTujuan) {
+    H.alert('error', 'No RM Tujuan Tidak Boleh Kosong')
+    return
+  }
+
+  let objSave = {
+    'normAsal': e.normAsal,
+    'normTujuan': e.normTujuan,
+  }
+
+  await useApi().post('dashboard/registrasi/gabung-norm', objSave)
+
+}
+
+const showModalGabungRM = (e: any) => {
+  modalGabungRM.value = true
+  item.namaPasien = e.namapasien
+  item.normAsal = e.nocm
+}
+
+const clear = () => {
+  item.alasanpembatalan = ''
+  item.tanggalpembatalan = ''
+
+  modalBatalRegis.value = false
+}
+
+const listButton: any = ref([
+  {
+    label: 'Pasien Lama ',
+    icon: 'fas fa-users',
+    command: () => {
+      router.push({ name: 'module-registrasi-pasien-lama' });
+    }
+  },
+  {
+    label: 'Pasien Baru',
+    icon: 'fas fa-user-plus',
+    command: () => {
+      router.push({ name: 'module-registrasi-pasien-baru' });
+    }
+  }
+])
+
+
+const cetakRegisRanap = (e: any) => {
+  item.bahasaDipakai = e.bahasa
+  item.bantuanPenerjemah = e.bantuanpenerjemah
+  item.bantuanPelayanan = e.bantuanpelayanan
+  item.dikunjungi = e.dikunjungi
+  item.norec_pd = e.norec_pd
+  item.nocmfk = e.nocmfk
+  modalRegisRanap.value = true
+  // qzService.printData(`report/cetak-surat-pendaftaran-ranap?norec=${e.norec_pd}&nocmfk=${e.nocmfk}`, 'REGISTRASI RAWAT INAP', 1)
+}
+
+
+const cetakKeluarMasuk = (e: any) => {
+  // qzService.printData(`report/cetak-lembar-keluar-masuk?norec=${e.norec_pd}`, 'KELUAR MASUK', 1)
+  H.printBlade(`report/cetak-lembar-keluar-masuk?norec=${e.norec_pd}`)
+}
+
+const cetakGelangPasien = (e: any) => {
+  qzService.printData(`report/cetak-gelang-pasien?pdf=true&noregistrasi=${e.noregistrasi}`, 'GELANG PASIEN', 1)
+  // H.printBlade(`report/cetak-gelang-pasien?pdf=true&noregistrasi=${e.noregistrasi}`)
+}
+
+const saveFormCetakRanap = async (e: any) => {
+
+  if (!item.norec_pd) {
+    H.alert('error', 'Data tidak tersedia')
+    return
+  }
+  isBtnLoading.value = true
+  let objSave = {
+    'norec': item.norec_pd,
+    'bahasa': e.bahasaDipakai,
+    'bantuanPelayanan': e.bantuanPelayanan,
+    'bantuanPenerjemah': e.bantuanPenerjemah,
+    'dikunjungi': e.dikunjungi
+  }
+
+  await useApi().post('/dashboard/registrasi/save-surat-regis-ranap', objSave).then((response) => {
+    modalRegisRanap.value = false
+    H.printBlade(`report/cetak-surat-pendaftaran-ranap?norec=${item.norec_pd}&nocmfk=${item.nocmfk}`)
+  })
+  isBtnLoading.value = false
+
+}
+
+const checkinJKN = async (e: any) => {
+  isLoading.value = true
+  let json = {
+    'kodebooking': e.noreservasi
+  }
+  await useApi()
+    .postNoMessage(`/dashboard/checkin-jkn`, json)
+    .then((response: any) => {
+      isLoading.value = false
+      if (response.metaData.code == 200) {
+        H.alert('success', response.metaData.message);
+        if (IS_REGISTRASI.value) {
+
+          fetchPasien()
+        } else {
+          fetchReservasi()
+        }
+        asuransi(e)
+      } else {
+        H.alert('error', response.metaData.message);
+      }
+    })
+    .catch((e: any) => {
+      isLoading.value = false
+    })
+}
+const batalJKN = async (e: any) => {
+  // console.log(e)
+  isLoading.value = true
+  let json = {
+    'kodebooking': e.noreservasi
+  }
+  await useApi()
+    .postNoMessage(`/dashboard/batal-jkn`, json)
+    .then((response: any) => {
+      isLoading.value = false
+      if (response.metaData.code == 200) {
+        H.alert('success', response.metaData.message);
+        fetchReservasi()
+      } else {
+        H.alert('error', response.metaData.message);
+      }
+    })
+    .catch((e: any) => {
+      isLoading.value = false
+    })
+}
+
+const batalMeninggal = async (e:any)=>{
+
+  let objSave = {
+    nocmfk : e.nocmfk,
+    norec_pd : e.norec_pd,
+  }
+
+  confirm.require({
+    message: `Apakah Yakin Pasien Akan Dibatalkan Meniggal`,
+    header: 'Konfirmasi Registrasi Pasien',
+    icon: 'pi pi-info-circle',
+    acceptClass: 'p-button-danger',
+    accept: async () => {
+      console.log(objSave)
+      await useApi().post('registrasi/batal-meninggal', objSave)
+    },
+    reject: () => { },
+  })
+
+}
+
+const countData = async () => {
+  let dari = ''
+  let sampai = ''
+  if (item.qPeriode) {
+    if (item.qPeriode[0]) {
+      dari = H.formatDate(item.qPeriode[0], 'YYYY-MM-DD')
+    }
+    if (item.qPeriode[1]) {
+      sampai = H.formatDate(item.qPeriode[1], 'YYYY-MM-DD')
+    } else {
+      sampai = H.formatDate(item.qPeriode[0], 'YYYY-MM-DD')
+    }
+
+  const response = await useApi().get(`/registrasi/count-daftar?dari=${dari}&sampai=${sampai}`) .then((response: any) => {
+    dataCount.value = response.kelompokpasien
+    dataDept.value = response.departemen
+   })
+}
+}
+
+
+
+qzService.connect()
+fetchDashboard()
+fetchdDropdown()
+fetchPasien()
+// countData()
+
+
+
+</script>
+
+<style lang="scss">
+@import '/@src/scss/abstracts/all';
+@import '/@src/scss/custom/config';
+@import '/@src/scss/module/dashboard/registrasi.scss';
+@import '/@src/scss/module/registrasi/list-pasien';
+
+.c-title {
+  border-top-left-radius: 11px;
+  border-left: solid hsl(19deg 100% 75% / 72%) 3px;
+}
+.block-heading {
+      font-family: var(--font-alt);
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: var(--white);
+      margin-bottom: 4px;
+    }
+</style>

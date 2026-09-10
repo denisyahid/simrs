@@ -1,0 +1,221 @@
+<div class="header-navbar navbar navbar-expand-lg align-items-center navbar-shadow navbar-light floating-nav" style="background: white;">
+    <div class="navbar-container d-flex content">
+        <div class="bookmark-wrapper d-flex align-items-center">
+            <a aria-current="page" class="nuxt-link-exact-active nuxt-link-active"
+                style="display: flex; height: 100%;"><img style="object-fit: cover; height: 40px;"
+                    src="assets/img/logo_only.png"><span
+                    style="font-size: 18px; margin-left: 20px; font-weight: bold; display: flex; align-items: center;">
+                    <div class="labels white--text" style="line-height: 1; align-self: center;">
+                        <div class="labelrs">RSUD BALI MANDARA</div>
+                        <div class="sublabelrs">TRANSMEDIC</div>
+                    </div>
+                </span>
+            </a>
+        </div>
+        <ul class="nav navbar-nav align-items-center ml-auto">
+            <li class="nav-item d-none d-lg-block"><a type="button" class="nav-link nav-link-style btn"><span
+                        class="ficon font-medium-5 feather icon-moon"></span></a></li>
+            <li ngbdropdown="" class="nav-item dropdown-user">
+                <span id="navbarUserDropdown" ngbdropdowntoggle="" aria-haspopup="true" aria-expanded="false"
+                    class="dropdown-toggle nav-link dropdown-user-link">
+                    <div class="user-nav d-sm-flex d-none">
+                        <span class="user-name font-weight-bolder" [routerLink]="['/index']" pTooltip="Kembali"
+                            style="cursor: pointer;">
+                            <div><span class="tanggal" style="background:rgba(234, 84, 85, 0.12); font-size: 1.3rem;">{{tgl}}</span>
+                                <span class="jam" style="background:rgba(234, 84, 85, 0.12); font-size: 1.3rem;">{{jamSekarang}}</span></div>
+                        </span>
+                    </div>
+                </span>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<div class="app-content">
+    <div class="p-grid">
+        <div class="p-col-6">
+            <div class="p-grid">
+                <div class="p-col-12 header-box labelNR" style="color:#008cff" >
+                    List Verifikasi Obat
+                </div>
+                <div class="p-col-6">
+                    <div class="label-box" style="color:#008cff">
+                        Non Racikan
+                    </div>
+                    <div class="card maincard">
+                        <p-scrollPanel class="scrollPanelN" [style]="{width: '100%', height: 'calc(100vh - 180px)'}">
+                            <table class="table-custom">
+                                <tr *ngFor="let itemN of dataNonRacikan">
+                                    <td>
+                                        <span class="p-tag mobile-p-tag">{{itemN.aanoantri}}</span> <span>{{ itemN.namapasien }}</span>
+                                    </td>
+                                    <td style="text-align: right;"><span class="p-tag dekstop-p-tag">{{itemN.aanoantri}}</span></td>
+                                </tr>
+                            </table>
+                            <!-- <p-table [value]="dataNonRacikan" styleClass="p-datatable-customers" [rowHover]="true"
+                                scrollable="true">
+                                <ng-template pTemplate="header">
+                                    <tr>
+                                        <th>Pasien</th>
+                                        <th style="width:70px">Status</th>
+                                    </tr>
+                                </ng-template>
+                                <ng-template pTemplate="body" let-items>
+                                    <tr [ngClass]="{'row-kosong': items.tersedia == 0}">
+                                        <td>
+                                            <div>{{items.namapasien}}</div>
+                                        </td>
+                                        <td style="width:70px">
+                                            <span class="p-tag">{{items.aanoantri}}</span>
+                                        </td>
+                                    </tr>
+                                </ng-template>
+                            </p-table> -->
+                        </p-scrollPanel>
+                    </div>
+                </div>
+                <div class="p-col-6">
+                    <div class="label-box" style="color:#008cff" >
+                        Racikan
+                    </div>
+                    <div class="card maincard">
+                        <p-scrollPanel class="scrollPanelR" [style]="{width: '100%', height: 'calc(100vh - 180px)'}">
+                            <table class="table-custom">
+                                <tr *ngFor="let itemR of dataRacikan">
+                                    <td>
+                                        <span class="p-tag mobile-p-tag">{{itemR.aanoantri}}</span> <span>{{ itemR.namapasien }}</span>
+                                    </td>
+                                    <td style="text-align: right;"><span class="p-tag dekstop-p-tag">{{itemR.aanoantri}}</span></td>
+                                    <!-- <td>{{ itemR.namapasien }}</td>
+                                    <td style="text-align: right;"><span class="p-tag">{{itemR.aanoantri}}</span></td> -->
+                                </tr>
+                            </table>
+                            <!-- <p-table [value]="dataRacikan" styleClass="p-datatable-customers" [rowHover]="true"
+                                scrollable="true">
+                                <ng-template pTemplate="header">
+                                    <tr>
+                                        <th>Pasien</th>
+                                        <th style="width:70px">Status</th>
+                                    </tr>
+                                </ng-template>
+                                <ng-template pTemplate="body" let-items>
+                                    <tr [ngClass]="{'row-kosong': items.tersedia == 0}">
+                                        <td>
+                                            <div>{{items.nocm}}</div>
+                                            <div>{{items.namapasien}}</div>
+                                            <div>{{items.ruanganasal}}</div>
+                                        </td>
+                                        <td style="width:70px">
+                                            <span class="p-tag">{{items.statusorder}}</span>
+                                        </td>
+                                    </tr>
+                                </ng-template>
+                            </p-table> -->
+                        </p-scrollPanel>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="p-col-6">
+            <div class="p-grid">
+                <div class="p-col-12 header-box labelPanggil">
+                    Antrian Dipanggil
+                </div>
+                <div class="p-col-6">
+                    <div class="label-box" style="color: #f00;">Non Racikan</div>
+                    <div class="card" style="height: 130px;padding: 5px;">
+                        <div class="label-conter">
+                            <div>{{AntrianNoAntrianAktif_N}}</div>
+                            <div>{{AntrianNamaAktif_N}}</div>
+                            <!-- <div>{{AntrianRuanganAktif_N}}</div> -->
+                        </div>
+                    </div>
+                </div>
+                <div class="p-col-6">
+                    <div class="label-box" style="color: #f00;">Racikan</div>
+                    <div class="card" style="height: 130px;padding: 5px;">
+                        <div class="label-conter">
+                            <div>{{AntrianNoAntrianAktif_R}}</div>
+                            <div>{{AntrianNamaAktif_R}}</div>
+                            <!-- <div>{{AntrianRuanganAktif_R}}</div> -->
+                        </div>
+                    </div>
+                </div>
+                <div class="p-col-12 header-box labelPanggil">
+                    List Obat Selesai
+                </div>
+                <div class="p-col-12">
+                    <div class="card" style="background: #38ff0054;">
+                        <p-scrollPanel class="scrollPanelS" [style]="{width: '100%', height: 'calc(100vh - 370px)'}">
+                            <table class="table-custom">
+                                <tr *ngFor="let itemS of dataSelesai">
+                                    <td>{{ itemS.namapasien }}</td>
+                                    <td style="text-align: right;"><span class="p-tag">{{itemS.statusorder}}</span></td>
+                                </tr>
+                            </table>
+                            <!-- <p-table [value]="dataSelesai" styleClass="p-datatable-customers" [rowHover]="true"
+                                scrollable="true">
+                                <ng-template pTemplate="header">
+                                    <tr>
+                                        <th>Pasien</th>
+                                        <th style="width:70px">Status</th>
+                                    </tr>
+                                </ng-template>
+                                <ng-template pTemplate="body" let-items>
+                                    <tr [ngClass]="{'row-kosong': items.tersedia == 0}">
+                                        <td>
+                                            <div>{{items.noregistrasi}}</div>
+                                            <div>{{items.keterangan}}</div>
+                                            <div>{{items.ruanganasal}}</div>
+                                        </td>
+                                        <td style="width:70px">
+                                            <span class="p-tag">{{items.statusorder}}</span>
+                                        </td>
+                                    </tr>
+                                </ng-template>
+                            </p-table> -->
+                        </p-scrollPanel>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 
+<div class="app-content">
+    <div class="p-grid">
+        <div class="p-col-6">
+            <div class="card">
+                Rawat Jalan
+                <div class="p-grid">
+                    <div class="p-col-12">
+                        <div class="card">
+                            Racikan
+                            <p-scrollPanel [style]="{width: '100%', height: 'calc(100vh - 320px)'}">
+                                <p-table [value]="dataSource" styleClass="p-datatable-customers" [rowHover]="true"
+                                    scrollable="true">
+                                    <ng-template pTemplate="header">
+                                        <tr>
+                                            <th>No Registrasi </th>
+                                            <th>Pasien</th>
+                                            <th>Status</th>
+                                            <th>Jenis</th>
+                                            <th>No Resep</th>
+                                            <th>Tanggal</th>
+                                        </tr>
+                                    </ng-template>
+                                </p-table>
+                            </p-scrollPanel>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="p-col-6">
+            <div class="card">
+                Rawat Inap
+            </div>
+        </div>
+    </div>
+</div> -->

@@ -1,0 +1,506 @@
+<html>
+<head>
+    <title>
+        Report
+    </title>
+        @if(stripos(\Request::url(), 'localhost') !== FALSE)
+         <link href="{{ asset('css/style.css') }}" rel="stylesheet">
+        @else
+         <link href="{{ asset('service/css/style.css') }}" rel="stylesheet">
+        @endif
+ 
+</head>
+<style type="text/css" media="print">
+    @page {
+        size: auto;   /* auto is the initial value */
+        margin: 0;  /* this affects the margin in the printer settings */
+        bottom: 50;
+    }
+    .page-break {
+        page-break-after: always;
+    }
+</style>
+<style>
+    tr td {
+        padding: 2px 4px 2px 4px;
+    }
+
+    .borderss {
+        border-bottom: 1px solid black;
+    }
+
+    body {
+        font-family: Arial;
+    }
+</style>
+<body style="background-color: #CCCCCC">
+<div align="center">
+    <section class="page-break">
+    <table cellspacing="0" cellpadding="0" bgcolor="#FFFFFF" border="0" width="{{$pageWidth}}" height="500">
+    <tbody>
+        <tr>
+            <td colspan="2" style="padding: 30px; text-align:left">
+                <b>
+                    <font style="font-size: 12pt" color="#000000">Lembar : I/II/III/IV/V</font>
+                </b> 
+            </td>
+            <td style="padding-right: 30px" align="right"></td>
+            <td colspan="2" style="padding-right: 30px" align="right">
+                <b>
+                    <font style="font-size: 12pt" color="#000000">Model : Bend. 26. a</font>
+                </b> 
+            </td>
+        </tr>
+        <tr>
+            <td colspan="5" style="padding: 10px" align="center">
+                <font style="font-size: 14pt" color="#000000"><b><u> BUKTI KAS PENGELUARAN </u></b><br>({{ $sumberdana[0]->asalproduk}})</font>
+            </td>
+        </tr>
+        </tbody>
+        <tbody>
+        <tr>
+            <td colspan="1" style="text-align:left; padding-left: 50px; padding-bottom: 5px; padding-top: 15px;">
+                <font style="font-size: 12pt" color="#000000">Terima dari</font>
+            </td>
+            <td colspan="4" style="padding: 10px; padding-bottom: 5px; padding-top: 5px;" align="left">
+                <font style="font-size: 12pt" color="#000000">: Direktur {{$settingrba->pengelolakeuanganblud}}</font>
+            </td>
+        </tr>
+        <tr>
+            <td style="text-align:left; padding-left: 50px; padding-bottom: 5px; padding-top: 5px;">
+                <font style="font-size: 12pt" color="#000000">Uang Sebesar</font>
+            </td>
+            <td colspan="4" style="padding: 10px; padding-bottom: 5px; padding-top: 5px;" align="left">
+                <font style="font-size: 12pt" color="#000000">: {{ ucwords(strtolower(str_replace(' ', ' ', $terbilang))) }}</font>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="4" style="text-align:left; padding-left: 50px; padding-bottom: 5px; padding-top: 10px;">
+                <font style="font-size: 12pt" color="#000000">Yaitu untuk membayar: </font>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="5" style="text-align:justify; padding-left: 50px; padding-bottom: 10px; padding-top: 10px; padding-right: 40px;">
+            @php
+                    $str = $kegiatan[0]->ktsubsub;
+                    $str1 = explode("-",$str)[count(explode("-",$str))-1];
+                @endphp
+                <font style="font-size: 12pt" color="#000000">{{$mataanggaran[0]->namamataanggaran}} ({{$mataanggaran[0]->kodemataanggaran}}) pada sub kegiatan {{ $kegiatan[0]->ktsub }} sub sub kegiatan {{ $str1 }}
+                @if( $spj[0]->deskripsi != null)
+                    @if ($spj[0]->deskripsi == "" || $spj[0]->deskripsi == "-")
+                    @else
+                        berdasarkan {{$spj[0]->deskripsi}} 
+                    @endif
+                @else
+                @endif
+                dengan rincian biaya terlampir.</font>
+            </td>
+        </tr>
+        </tbody>
+        <tbody>
+        @php
+            $digitterbilang = strlen(substr(strrchr(sprintf("%s", $jumlah[0]->totalfix), "."), 1));
+        @endphp
+        <tr>
+            <td colspan="2" style="text-align:left; padding-left: 50px; padding-bottom: 5px; padding-top: 10px;">
+                <font style="font-size: 12pt" color="#000000">Terbilang: {{ number_format($jumlah[0]->totalfix,$digitterbilang,',','.') }}</font>
+            </td>
+        </tr>
+
+        <tr>
+            <td colspan="2" style="text-align:center; padding-left: 50px; padding-bottom: 5px; padding-top: 5px; width: 100px;">
+                <font style="font-size: 12pt" color="#000000"></font>
+            </td>
+            <td style="width: 100px;"></td>
+            <td colspan="2" style="padding: 10px; padding-bottom: 5px; padding-top: 5px; width: 100px;" align="center">
+                <font style="font-size: 12pt" color="#000000"></font>
+            </td>
+        </tr>
+        <tr>
+            <td  colspan="2" style="text-align:center; padding-left: 50px; padding-bottom: 80px; padding-top: 5px; width: 100px;">
+                <font style="font-size: 12pt" color="#000000"></font>
+            </td>
+            <td style="text-align:center; padding-left: 50px; padding-bottom: 80px; padding-top: 5px; width: 100px;">
+                <font style="font-size: 12pt" color="#000000"></font>
+            </td>
+            <td  colspan="2" style="padding: 10px; padding-bottom: 80px; padding-top: 5px; width: 100px;" align="center">
+                <font style="font-size: 12pt" color="#000000">Pejabat Pelaksana<br>Teknis Kegiatan (PPTK)</font>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2" style="text-align:center; padding-left: 50px; padding-bottom: 5px; padding-top: 5px; width: 120px;">
+                <font style="font-size: 12pt" color="#000000"></font>
+            </td>
+            <td style="text-align:center; padding-left: 50px; padding-bottom: 5px; padding-top: 5px; width: 80px;">
+                <font style="font-size: 12pt" color="#000000"></font>
+            </td>
+            <td colspan="2" style="padding: 10px; padding-bottom: 5px; padding-top: 5px; width: 100px;" align="center">
+                <font style="font-size: 12pt" color="#000000"><u>{{ $kegiatan[0]->namalengkap}}</u><br>NIP. {{ $kegiatan[0]->nippns}}</font>
+            </td>
+        </tr>
+
+        <tr>
+            <td colspan="5" style="text-align:right; padding-right: 50px; padding-bottom: 5px; padding-top: 30px;">
+                <font style="font-size: 12pt" color="#000000"></font>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <table cellspacing="0" cellpadding="0" bgcolor="#FFFFFF" border="0" width="{{$pageWidth}}">
+        <tbody>
+        <tr>
+            <td colspan="5">
+                <table>
+                    <tr>
+                        <td colspan="5">
+                            <table>
+                            <tr>
+                        <td   style="text-align:center; padding-left: 50px; padding-bottom: 80px; padding-top: 5px; width: 300px;">
+                            <font style="font-size: 12pt" color="#000000">Mengetahui dan Menyetujui<br>Direktur Selaku KPA</font>
+                        </td>
+                        <td style="text-align:center;  padding-bottom: 80px; padding-top: 5px; width: 250px;">
+                            <font style="font-size: 12pt" color="#000000">Bendahara Pengeluaran</font>
+                        </td>
+                        <td  style="padding: 10px; padding-bottom: 80px; padding-top: 5px; width: 300px;" align="center">
+                            <font style="font-size: 12pt" color="#000000">Yogyakarta, &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; {{$kegiatan[0]->tahun}} <br> Yang menerima,<br>Tanda Tangan</font>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td  style="text-align:center; padding-left: 50px; padding-bottom: 5px; padding-top: 5px; width: 120px;">
+                            <font style="font-size: 12pt" color="#000000"><u>{{$settingrba->namalengkap}}</u><br>NIP. {{$settingrba->nippns}}</font>
+                        </td>
+                        <td style="text-align:center; padding-bottom: 5px; padding-top: 5px; width: 80px;">
+                            <font style="font-size: 12pt" color="#000000"><u>{{ $spj[0]->namabendahara}}</u><br>NIP. {{ $spj[0]->nipbendahara}}</font>
+                        </td>
+                        <td  style="padding: 10px; padding-bottom: 5px; padding-top: 5px; width: 100px;" align="center">
+                            <font style="font-size: 12pt" color="#000000"><u>{{ $spj[0]->namarekanan}}</u></font>
+                        </td>
+                    </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <table cellspacing="0" cellpadding="0" bgcolor="#FFFFFF" border="0" width="{{$pageWidth}}">
+        <tbody>
+        <tr>
+            <td style="text-align:center; padding-left: 50px; padding-bottom: 0px; width: 120px; border-top: 4px solid black; ">
+            </td>
+            <td style="text-align:center; padding-left: 50px; padding-bottom: 0px; width: 80px; border-top: 4px solid black">
+            </td>
+            <td style="padding: 10px; padding-bottom: 0px; width: 100px; border-top: 4px solid black"" align="center">
+            </td>
+        </tr>
+        <tr>
+            <td style="text-align:center; padding-left: 50px; padding-bottom: 5px; padding-top: -5px; width: 120px; border-top: 2px solid black; ">
+            </td>
+            <td style="text-align:center; padding-left: 50px; padding-bottom: 5px; padding-top: -5px; width: 80px; border-top: 2px solid black; border-left: 2px solid black">
+            </td>
+            <td style="padding: 10px; padding-bottom: 5px; padding-top: -5px; width: 100px; border-top: 2px solid black; border-left: 2px solid black"" align="center">
+            </td>
+        </tr>
+        <tr>
+            <td style="text-align:center; padding-left: 50px; width: 120px;">
+                <font style="font-size: 12pt" color="#000000">
+                </font>
+            </td>
+            <td style="text-align:center; padding-left: 0px; width: 80px; border-left: 2px solid black">
+                <font style="font-size: 12pt" color="#000000">Telah dipungut:</font>
+            </td>
+            <td style="padding: 10px; width: padding-left: 30px; 100px; border-left: 2px solid black" align="center">
+                <font style="font-size: 12pt" csolor="#000000">Telah dibukukan:</font>
+            </td>
+        </tr>
+        <tr>
+            <td style="text-align:center; padding-left: 50px; width: 120px;">
+                <font style="font-size: 12pt" color="#000000"> Barang tersebut telah diterima dengan cukup dan baik
+                </font>
+            </td>
+            <td style="text-align:center; padding-left: 20px; padding-right: 20px; width: 80px; border-left: 2px solid black">
+                            <table width=100%>
+                                <tr>
+                                    <td style="text-align:left; padding-left: 5px; width: 50px; border-left: 0px solid black">
+                                        <font style="font-size: 12pt" color="#000000">PPN</font>
+                                    </td>
+                                    <td style="text-align:center; padding-left: 5px; width: 10px; border-left: 0px solid black">
+                                        <font style="font-size: 12pt" color="#000000">:</font>
+                                    </td>
+                                    <td style="text-align:right; padding-left: 5px; width: 150px; border-left: 0px solid black">
+                                        <font style="font-size: 12pt" color="#000000">{{ number_format($spj[0]->ppn,$digitterbilang,',','.') }}</font>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+            <td style=" width: 100px; padding-left: 30px; border-left: 2px solid black" align="left">
+                <font style="font-size: 12pt" csolor="#000000">BK Tgl. ..............No...............</font>
+            </td>
+        </tr>
+        <tr>
+            <td style="text-align:center; padding-left: 80px; width: 120px;">
+                <font style="font-size: 12pt" color="#000000">
+                </font>
+            </td>
+            <td style="text-align:center; padding-left: 20px; padding-right: 20px; width: 80px; border-left: 2px solid black">
+                        <table width=100%>
+                                <tr>
+                                    <td style="text-align:left; padding-left: 5px; width: 50px">
+                                        <font style="font-size: 12pt" color="#000000">PPh</font>
+                                    </td>
+                                    <td style="text-align:center; padding-left: 5px; width: 10px">
+                                        <font style="font-size: 12pt" color="#000000">:</font>
+                                    </td>
+                                    <td style="text-align:right; padding-left: 5px; width: 150px; border-bottom: 1px solid black">
+                                        <font style="font-size: 12pt" color="#000000">{{ number_format($spj[0]->pph,$digitterbilang,',','.') }}</font>
+                                    </td>
+                                </tr>
+                            </table>                            
+                        </td>
+            <td style="width: 100px; padding-left: 30px; border-left: 2px solid black" align="left">
+                <font style="font-size: 12pt" csolor="#000000">No. Rek: {{$mataanggaran[0]->kodemataanggaran}}</font>
+            </td>
+        </tr>
+        <tr>
+            <td style="text-align:center; padding-left: 50px; width: 120px;">
+                <font style="font-size: 12pt" color="#000000">
+                </font>
+            </td>
+            <td style="text-align:center; padding-left: 20px; padding-right: 20px; width: 80px; border-left: 2px solid black">
+                        <table width=100%; border=0>
+                                <tr>
+                                    <td style="text-align:left; padding-left: 5px; width: 50px; border-left: 0px solid black">
+                                        <font style="font-size: 12pt" color="#000000">Total</font>
+                                    </td>
+                                    <td style="text-align:center; padding-left: 5px; width: 10px; border-left: 0px solid black">
+                                        <font style="font-size: 12pt" color="#000000">:</font>
+                                    </td>
+                                    <td style="text-align:right; padding-left: 5px; width: 150px; border-left: 0px solid black">
+                                        <font style="font-size: 12pt" color="#000000">{{ number_format($spj[0]->totalpp,$digitterbilang,',','.') }}</font>
+                                    </td>
+                                </tr>
+                            </table>                                                        
+                        </td>
+            <td style="width: 100px; padding-left: 30px; border-left: 2px solid black" align="left">
+                <font style="font-size: 12pt" csolor="#000000">Kode Kegiatan: {{$kegiatan[0]->kodesub}}</font>
+            </td>
+        </tr>
+        <tr>
+            <td style="text-align:center; padding-left: 50px; padding-bottom: 30px; width: 120px;">
+                <font style="font-size: 12pt" color="#000000"><u>{{ $spj[0]->namapenerima}}</u><br>{{ ($spj[0]->namapenerima<>'') ? 'NIP. '.$spj[0]->nippenerima : ''}}
+                </font>
+            </td>
+            <td style="text-align:center; padding-left: 0px; padding-bottom: 30px;  width: 80px; border-left: 2px solid black">
+                <font style="font-size: 12pt;" color="#000000"></font>
+            </td>
+            <td style="width: 100px; padding-left: 30px; padding-bottom: 30px; border-left: 2px solid black" align="left">
+                <font style="font-size: 12pt" csolor="#000000">Tahun Anggaran: {{$kegiatan[0]->tahun}}</font>
+            </td>
+        </tr>
+        <tr>
+            <td style="text-align:center; padding-left: 50px; padding-bottom: 50px; width: 120px;">
+                <font style="font-size: 12pt" color="#000000">
+                </font>
+            </td>
+            <td style="text-align:center; padding-left: 0px; padding-bottom: 50px; width: 80px; border-left: 2px solid black">
+                <font style="font-size: 12pt;" color="#000000">Paraf</font>
+            </td>
+            <td style="width: 100px; padding-left: 30px; padding-bottom: 50px; border-left: 2px solid black" align="center">
+                <font style="font-size: 12pt" csolor="#000000">Paraf</font>
+            </td>
+        </tr>
+        <tr>
+            <td style="text-align:center; padding-left: 50px; width: 120px;">
+                <font style="font-size: 12pt" color="#000000">
+                </font>
+            </td>
+            <td style="text-align:center; padding-left: 0px; width: 80px; border-left: 2px solid black">
+                <font style="font-size: 12pt;" color="#000000">(............................)</font>
+            </td>
+            <td style="text-align:center; padding-left: 30px; width: 100px; border-left: 2px solid black">
+                <font style="font-size: 12pt" csolor="#000000">(............................)</font>
+            </td>
+        </tr>
+        <tr>
+            <td style="text-align:center; padding-left: 50px; width: 120px;">
+                <font style="font-size: 12pt" color="#000000">
+                </font>
+            </td>
+            <td style="text-align:center; padding-left: 30px; width: 80px; border-left: 2px solid black">
+                <font style="font-size: 12pt;" color="#000000"></font>
+            </td>
+            <td style="text-align:center; padding-left: 30px; width: 100px; border-left: 2px solid black">
+                <font style="font-size: 12pt" csolor="#000000"></font>
+            </td>
+        </tr>
+        <tr>
+            <td style="text-align:center; padding-left: 0px; padding-top: 100px; width: 100px;">
+                <font style="font-size: 12pt" color="#000000"></font>
+            </td>
+            <td style="width: 100px; padding-top: 100px;"></td>
+            <td style="padding-top: 100px; width: 100px;" align="center">
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <div style="position: fixed;
+    left: -400px;
+    bottom: -80px;
+    height: 10%;
+    width: 100%;">
+        <table>
+            <tbody>
+                <tr>
+                    <td style="text-align:left;padding-left:250px">
+                        <font style="font-size: 12pt;" color="#000000">{{$spj[0]->norealisasi}}</font>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+<section class="page-break">
+    <table cellspacing="0" cellpadding="0" bgcolor="#FFFFFF" border="0" width="{{$pageWidth}}" style="padding-left: 80px; padding-right: 80px;">
+    <tbody>
+        <tr>
+            <td colspan="5" style="padding-left: 120px; padding-top: 50px; padding-bottom: 0px; " align="center">
+                <b>
+                    <font style="font-size: 14pt" color="#000000">LAMPIRAN SPJ {{$settingrba->pengelolakeuanganblud}}</font>
+                </b> 
+            </td>
+        </tr>
+        <!-- <tr>
+            <td colspan="4" style="padding-left: 120px; padding-top: 5px; padding-bottom: 0px; " align="center">
+                <b>
+                    <font style="font-size: 14pt" color="#000000">Nomor: {{$spj[0]->norealisasi}}</font>
+                </b> 
+            </td>
+        </tr> -->
+        <tr>
+            <td colspan="5" style="padding-left: 120px; padding-top: 5px; padding-bottom: 50px; " align="center">
+                <b>
+                    <font style="font-size: 14pt" color="#000000">{{$kegiatan[0]->ktsub}} <br> {{$mataanggaran[0]->kodemataanggaran}} - {{$mataanggaran[0]->namamataanggaran}}</font>
+                </b> 
+            </td>
+        </tr>
+        </tbody>
+
+        <tbody style="padding-left: 50px; padding-right: 50px;">
+        <tr style="border: 1px solid black" >
+            <td style="padding: 10px; border: 1px solid black; width: 10px; height: 20px;" align="center">
+                NO.
+            </td>
+            <td style="padding: 10px; border: 1px solid black; width: 300px; height: 20px;" align="center">
+                NAMA BARANG
+            </td>
+            <td style="padding: 10px; border: 1px solid black; width: 50px; height: 20px;" align="center">
+                HARGA SATUAN
+            </td>
+            <td style="padding: 10px; border: 1px solid black; width: 50px; height: 20px;" align="center">
+                JUMLAH
+            </td>
+            <td style="padding: 10px; border: 1px solid black; width: 50px; height: 20px;" align="center">
+                SUB TOTAL
+            </td>
+        </tr>
+        </tbody>
+        <tbody style="padding-left: 50px; padding-right: 50px;">
+        @php
+        $nomor = 0
+        @endphp
+            @foreach($detail as $dt)
+            @php
+            $nomor++
+            @endphp
+        <tr style="border: 1px solid black" >
+            <td style="padding: 10px;  border: 1px solid black; width: 10px; height: 20px;" align="center">
+                {{$nomor}}.
+            </td>
+            <td style="padding: 10px; border: 1px solid black; width: 300px; height: 20px; " align="center">
+                {{$dt->uraian}}
+            </td>
+            @php
+                $digitharga = strlen(substr(strrchr(sprintf("%s", $dt->harga), "."), 1));
+                $digitsubtotal = strlen(substr(strrchr(sprintf("%s", $dt->subtotal), "."), 1));
+            @endphp
+            <td style="padding: 10px; border: 1px solid black; width: 50px; height: 20px; " align="center">
+                {{ number_format($dt->harga,$digitharga,',','.') }}
+            </td>
+            <td style="padding: 10px; border: 1px solid black; width: 50px; height: 20px; " align="center">
+                {{ $dt->jml }}
+            </td>
+            <td style="padding: 10px; border: 1px solid black; width: 50px; height: 20px; " align="center">
+                {{ number_format($dt->subtotal,$digitsubtotal,',','.') }}
+            </td>
+            @endforeach
+        </tr>
+        <tr style="border: 1px solid black" >
+            <td colspan="4" style="padding: 10px; border: 1px solid black; width: 200px; " align="center">
+                JUMLAH TOTAL
+            </td>
+            @php
+                $digittotal = strlen(substr(strrchr(sprintf("%s", $jumlah[0]->totalfix), "."), 1));
+            @endphp
+            <td style="padding: 10px; width: 50px; border: 1px solid black " align="center">
+                {{ number_format($jumlah[0]->totalfix,$digittotal,',','.') }}
+            </td>
+        </tr>
+        <tr style="border: 1px solid black;" >
+            <td colspan="4" style="padding: 10px; border: 1px solid black " align="center">
+                JUMLAH TOTAL (PEMBULATAN)
+            </td>
+            <td style="padding: 10px; width: 50px; border: 1px solid black " align="center">
+            {{ number_format($jumlah[0]->totalpembulatan,0,',','.') }}
+            </td>
+        </tr>
+        <tr>
+            <td style="text-align:center; width: 10px; padding-top: 50px;" align="right>
+                    <font style="font-size: 12pt" csolor="#000000"></font>
+                </td>
+                <td style="text-align:center; width: 300px; padding-top: 50px;" align="right>
+                    <font style="font-size: 12pt" csolor="#000000"></font>
+                </td>
+                <td colspan="3" style="text-align:center; width: 200px; padding-top: 50px;" align="right>
+                    <font style="font-size: 12pt" csolor="#000000">Yogyakarta,&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; {{$kegiatan[0]->tahun}}</font>
+                </td>
+            </tr>
+            <tr>
+            <td style="text-align:center; width: 10px; " align="right>
+                    <font style="font-size: 12pt" csolor="#000000"></font>
+                </td>
+                <td style="text-align:center; width: 200px; " align="right>
+                    <font style="font-size: 12pt" csolor="#000000"></font>
+                </td>
+                <td colspan="3" style="text-align:center; width: 300px; " align="right>
+                    <font style="font-size: 12pt" csolor="#000000">Yang Meneriman, <br> Tanda Tangan,</font>
+                </td>
+            </tr>
+        </tbody>
+        
+
+    </table>
+    <div style="position: fixed;
+    left: -400px;
+    bottom: -80px;
+    height: 10%;
+    width: 100%;">
+        <table>
+            <tbody>
+                <tr>
+                    <td style="text-align:left;padding-left:250px">
+                        <font style="font-size: 12pt;" color="#000000">{{$spj[0]->norealisasi}}</font>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+</section>
+
+</div>
+<script>
+    window.print()
+</script>
+</body>
+</html>

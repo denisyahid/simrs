@@ -1,0 +1,78 @@
+img, svg {vertical-align: middle;}
+.header-navbar.floating-nav {margin: 0 !important;border-radius: 0 !important;width: 100% !important;}
+.labelrs {color: #272727;}
+.sublabelrs {color: #393939;}
+.p-zero {padding: 0 !important;}
+.card {border-radius: 10px !important;border: 0;}
+.card-item-content {padding: 15px 10px;color: #fff;position: relative;}
+.cardfooter {background-color: rgba(0, 0, 0, 0.2);color: rgba(255,255,255,.8);display: block;padding: 3px 0;position: relative;text-align: center;font-size: 18px;text-decoration: none;z-index: 10;border-bottom-left-radius: 10px;border-bottom-right-radius: 10px;}
+.custom-label {line-height: 1.2;}
+.f-xs {font-size: 16px;}
+.f-sm {font-size: 20px;}
+.f-lg {font-size: 22px;}
+.f-xl {font-size: 25px;}
+.w-400 {font-weight: 400;}
+.w-600 {font-weight: 600;}
+.w-800 {font-weight: 800;}
+.w-bold {font-weight: bold;}
+.card-img-absolute { position: absolute; top: 0; right: 0; height: 100%;}
+.bg-gradient-danger {
+background: -webkit-gradient(linear, left top, right top, from(#f04), to(#ffbf96)) !important;
+background: linear-gradient(to right, #f04, #ffbf96) !important;
+}
+.bg-gradient-info {
+background: -webkit-gradient(linear, left top, right top, from(#070acd), to(#0095ff)) !important;
+background: linear-gradient(to right, #070acd, #0095ff) !important;
+}
+.bg-gradient-success {
+background: -webkit-gradient(linear, left top, right top, from(#009c83), to(#84d9d2)) !important;
+background: linear-gradient(to right, #009c83, #84d9d2) !important;
+}
+.bg-gradient-primary {
+background: -webkit-gradient(linear, left top, right top, from(#60f), to(#da8cff)) !important;
+background: linear-gradient(to right, #60f, #da8cff) !important;
+}
+.status-1 {
+    background:  #FFFF00 !important;
+color: #060505 !important;
+font-weight: bold;
+  }
+
+  .status-2 {
+    background: #017f14 !important;
+    color : #f5f5f5 !important;
+    font-weight: bold;
+  }
+  .status-3 {
+    background: #1c017f !important;
+    color : #f5f5f5 !important;
+    font-weight: bold;
+  }
+  .status-4 {
+    background: #980909 !important;
+    color : #f5f5f5 !important;
+    font-weight: bold;
+  }
+  .p-datatable-customers th,
+  .p-datatable-customers td {
+    min-width: 150px;  /* Ukuran minimum */
+    max-width: 200px;  /* Ukuran maksimum */
+    overflow: hidden;   /* Untuk menghindari overflow */
+    text-overflow: ellipsis; /* Untuk menampilkan elipsis jika teks terlalu panjang */
+    white-space: nowrap; /* Menghindari teks terputus di baris baru */
+}
+
+  .p-datatable-customers {
+    th, td {
+        min-width: 200px; // Ukuran minimal
+        max-width: 250px; // Ukuran maksimal
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    // Untuk kolom tertentu, misalnya Waktu Operasi
+    th.nocm, td.nocm {
+        width: 20px;
+    }
+}

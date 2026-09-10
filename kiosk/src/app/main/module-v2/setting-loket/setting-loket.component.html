@@ -1,0 +1,45 @@
+<div class="auth-wrapper auth-v2">
+    <div class="auth-inner row m-0" >
+        <!-- Brand logo-->
+        <a class="px-2 brand-logo" href="javascript:void(0);">
+            <img src="{{ coreConfig.app.appLogoImage }}" alt="brand-logo" height="80" />
+            <h1 class="brand-text ml-1 mt-2">{{ coreConfig.app.appRumahSakit }}</h1>
+        </a>
+        <!-- /Brand logo-->
+        <!-- Register-->
+        <div class="d-flex col-lg-12 align-items-center auth-bg px-2 p-lg-5">
+            <div class="col-12 col-sm-8 col-md-6 col-lg-12 px-xl-2 mx-auto">
+                <h2 class="card-title font-weight-bold mb-1">{{ coreConfig.app.appName }} 🚀</h2>
+                <p class="card-text mb-2">Silahkan pilih loket kiosk yang akan digunakan !</p>
+                <div class="row">
+                    <div class="col-6" *ngFor="let data of listLoket">
+                        <div class="card text-center cursor-pointer" (click)="goto(data.id)">
+                            <div class="card-body">
+                                <div class="avatar bg-light-success p-lg-3 m-0 mb-1">
+                                    <div class="avatar-content">
+                                        <i [data-feather]="'tv'" [size]="100"></i>
+                                    </div>
+                                </div>
+                                <h2 class="font-weight-bolder">{{ data.name }}</h2>
+                                <p class="mb-0 line-ellipsis">{{ data.subname }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- /Register-->
+        <!-- Left Text-->
+        <!-- <div class="d-none d-lg-flex col-lg-6 align-items-center p-5">
+            <div class="w-100 d-lg-flex align-items-center justify-content-center px-5">
+                <img class="img-fluid" [src]="
+            coreConfig.layout.skin === 'dark'
+            ? 'assets/images/pages/coming-soon-dart.svg'
+            : 'assets/images/pages/coming-soon.svg'
+        " alt="Register V2" />
+            </div>
+        </div> -->
+        <!-- /Left Text-->
+        
+    </div>
+</div>

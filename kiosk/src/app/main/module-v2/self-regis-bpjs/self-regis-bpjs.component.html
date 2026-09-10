@@ -1,0 +1,387 @@
+<section *ngIf="isHalamanAwal">
+    <form class="form-signin">
+        <div class="text-center mb-3">
+            <img class="mb-3" src="assets/images/logo_only.png" alt="" width="120" height="120">
+            <h1 class="mb-2 font-weight-bold">{{ coreConfig.app.appRumahSakit }}</h1>
+            <p>Nomor Rekam Medis / Nomor BPJS / NIK</p>
+        </div>
+    
+        <div class="form-label-group">
+            <input type="text" id="frmIdentitas" class="form-control" [(ngModel)]="item.frmIdentitas" name="frmIdentitas" autocomplete="off">
+        </div>
+        <button class="btn btn-lg btn-success btn-block" (click)="cariDataPasien()" *ngIf="!isLoadingHalAwal">Selanjutnya</button>
+        <button class="btn btn-lg btn-success btn-block" [disabled]="isLoadingHalAwal" *ngIf="isLoadingHalAwal">
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            <span class="ml-25 align-middle">Loading...</span>
+        </button>
+        <button class="btn btn-lg btn-danger btn-block" (click)="goTo('')">Kembali</button>
+    </form>
+</section>
+
+<section *ngIf="isHalamanPilihPoli">
+    <div id="user-profile">
+        <div class="row">
+            <div class="col-12">
+                <button type="button" class="btn btn-flat-primary" (click)="nextStep('halamanawal')" rippleEffect>
+                    <span [data-feather]="'arrow-left'" [class]="'mr-25'"></span>Kembali
+                </button>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-4">
+                                <div class="row">
+                                    <div class="col-12">
+                                        <p class="font-weight-normal mb-0">Nomor Rekam Medis</p>
+                                        <p class="h2 font-weight-bold mb-1">{{ item.pasien.nocm }}</p>
+                                    </div>
+                                    <div class="col-12">
+                                        <p class="font-weight-normal mb-0">Nomor Rujukan Terbaru</p>
+                                        <p class="h4 font-weight-bold mb-1">{{ item.rujukan[0].value.noKunjungan }}</p>
+                                    </div>
+                                    <div class="col-12">
+                                        <p class="font-weight-normal mb-0">Nomor BPJS</p>
+                                        <p class="h4 font-weight-bold mb-1">{{ item.pasien.nobpjs }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-8">
+                                <div class="row mb-1">
+                                    <div class="col-5">
+                                        <div class="media" style="margin-bottom: 5px;">
+                                            <div class="avatar bg-light-success avatar-md mr-1">
+                                                <div class="avatar-content">
+                                                    <span [data-feather]="'user'" [class]="'avatar-icon'" ></span>
+                                                </div>
+                                            </div>
+                                            <div class="media-body my-auto">
+                                                <p class="font-weight-normal mb-0">Nama</p>
+                                                <p class="h4 font-weight-bold">{{ item.pasien.namapasien }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="media" style="margin-bottom: 5px;">
+                                            <div class="avatar bg-light-success avatar-md mr-1">
+                                                <div class="avatar-content">
+                                                    <span [data-feather]="'calendar'" [class]="'avatar-icon'" ></span>
+                                                </div>
+                                            </div>
+                                            <div class="media-body my-auto">
+                                                <p class="font-weight-normal mb-0">Tgl. Lahir</p>
+                                                <p class="h4 font-weight-bold">{{ item.pasien.tgllahirformat }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="media" style="margin-bottom: 5px;">
+                                            <div class="avatar bg-light-success avatar-md mr-1">
+                                                <div class="avatar-content">
+                                                    <span [data-feather]="'users'" [class]="'avatar-icon'" ></span>
+                                                </div>
+                                            </div>
+                                            <div class="media-body my-auto">
+                                                <p class="font-weight-normal mb-0">Jenis Kelamin</p>
+                                                <p class="h4 font-weight-bold">{{ item.pasien.jeniskelamin }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mb-1">
+                                    <div class="col-12">
+                                        <div class="media" style="margin-bottom: 5px;">
+                                            <div class="avatar bg-light-success avatar-md mr-1">
+                                                <div class="avatar-content">
+                                                    <span [data-feather]="'home'" [class]="'avatar-icon'" ></span>
+                                                </div>
+                                            </div>
+                                            <div class="media-body my-auto">
+                                                <p class="font-weight-normal mb-0">Alamat</p>
+                                                <p class="h4 font-weight-bold">{{ item.pasien.alamatlengkap }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row" *ngIf="noReservasi">
+                                    <div class="col-12">
+                                        <div class="media" style="margin-bottom: 5px;">
+                                            <div class="avatar bg-light-success avatar-md mr-1">
+                                                <div class="avatar-content">
+                                                    <span [data-feather]="'tablet'" [class]="'avatar-icon'" ></span>
+                                                </div>
+                                            </div>
+                                            <div class="media-body my-auto">
+                                                <p class="font-weight-normal mb-0">Kode Reservasi</p>
+                                                <p class="h4 font-weight-bold">{{ noReservasi }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mb-1">
+                                    <div class="col-12">
+                                        <div class="media" style="margin-bottom: 5px;">
+                                            <div class="avatar bg-light-success avatar-md mr-1">
+                                                <div class="avatar-content">
+                                                    <span [data-feather]="'home'" [class]="'avatar-icon'" ></span>
+                                                </div>
+                                            </div>
+                                            <div class="media-body my-auto">
+                                                <p class="font-weight-normal mb-0">Kunjungan Terakhir</p>
+                                                <p class="h3 font-weight-bold">{{ item.kunjungan.namaruangan + ' / ' + item.kunjungan.tglregistrasi}}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12">
+                <div class="input-group mb-2">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i data-feather="search"></i></span>
+                    </div>
+                    <input type="text" class="form-control" placeholder="Cari..." [(ngModel)]="bookmarkText" />
+                </div>
+            </div>
+            <ng-container *ngIf="noReservasi;else other_content">
+                <div class="col-xs-12 col-sm-6 col-md-4 col-lg-3 col-12"
+                    *ngFor="let items of listRuanganReserv | filter: bookmarkText: 'namaruangan'"
+                    (click)="pilihRuangan(modalSuccess, items)"  placement="top" ngbTooltip="{{items.namaruangan}}">
+                    <div class="card" style="cursor: pointer;">
+                        <div class="card-header" style="padding:0.5rem">
+                            <span class="badge badge-pill mr-50 {{items.badge}}">{{items.sisa}} </span>
+                        </div>
+                        <div class="card-body" style="padding-bottom:0.5rem">
+                            <h4 class="card-title"
+                                style="white-space: nowrap; overflow: hidden;  text-overflow: ellipsis;  text-align: center;">
+                                {{items.namaruangan}}
+                            </h4>
+                        </div>
+                    </div>
+                </div>
+            </ng-container>
+            <ng-template #other_content>            
+            <div class="col-xs-12 col-sm-6 col-md-4 col-lg-3 col-12"
+                *ngFor="let items of listRuangan | filter: bookmarkText:'namaruangan'"
+                (click)="pilihRuangan(modalSuccess, items)"  placement="top" ngbTooltip="{{items.namaruangan}}">
+                <div class="card" style="cursor: pointer;">
+                    <div class="card-header" style="padding:0.5rem">
+                        <span class="badge badge-pill mr-50 {{items.badge}}">{{items.sisa}} </span>
+                    </div>
+                    <div class="card-body" style="padding-bottom:0.5rem">
+                        <h4 class="card-title"
+                            style="white-space: nowrap; overflow: hidden;  text-overflow: ellipsis;  text-align: center;">
+                            {{items.namaruangan}}
+                        </h4>
+                    </div>
+                </div>
+            </div>
+            </ng-template>
+        </div>
+    </div>
+</section>
+<section *ngIf="isHalamanCetak">
+    <div class="row">
+        <div class="col-12">
+            <button type="button" class="btn btn-flat-primary" (click)="goToTouchscreen()" rippleEffect>
+                <span [data-feather]="'arrow-left'" [class]="'mr-25'"></span>Kembali
+            </button>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header " style="display: inline;text-align: center;">
+                    <h3 class="no-cm" style="color: brown;">No. Rujukan : {{ item.peserta.noKunjungan }}</h3>
+                    <h3 class="no-cm" style="color: brown;">No. SEP : {{ dataSEP.noSep }} ({{ dataSEP.poli }})</h3>
+                </div>
+                <div class="card-body" style="text-align: center;">
+                    <div class="row">
+                        <div class="col-12 col-md-4">
+                            <p class="card-text"> No RM </p>
+                            <h4 class="card-title"> {{ item.peserta.peserta.mr.noMR }}</h4>
+
+                            <p class="card-text">Nama Pasien </p>
+                            <h4 class="card-title"> {{item.peserta.peserta.nama}}</h4>
+
+                            <p class="card-text">Jenis Kelamin </p>
+                            <h4 class="card-title"> {{item.peserta.peserta.sex}}</h4>
+
+                            <p class="card-text">No. Identitas</p>
+                            <h4 class="card-title"> {{item.peserta.peserta.nik}}</h4>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <p class="card-text">Tanggal Lahir</p>
+                            <h4 class="card-title"> {{item.peserta.peserta.tglLahir}}</h4>
+
+                            <p class="card-text">Umur </p>
+                            <h4 class="card-title">{{item.peserta.peserta.umur.umurSekarang}}</h4>
+
+                            <p class="card-text">Jenis Peserta </p>
+                            <h4 class="card-title">{{item.peserta.peserta.jenisPeserta.keterangan}}</h4>
+
+                            <p class="card-text">No. Telpon</p>
+                            <h4 class="card-title">{{item.peserta.peserta.mr.noTelepon}}</h4>
+
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <p class="card-text"> Tanggal Rujukan </p>
+                            <h4 class="card-title"> {{item.peserta.tglKunjungan}}</h4>
+
+                            <p class="card-text">No Kartu </p>
+                            <h4 class="card-title"> {{item.peserta.peserta.noKartu}}</h4>
+
+                            <p class="card-text">Asal Rujukan</p>
+                            <h4 class="card-title"> {{item.peserta.provPerujuk.nama}}</h4>
+
+                            <p class="card-text">Diagnosa</p>
+                            <h4 class="card-title"> {{item.peserta.diagnosa.nama}}</h4>
+
+                        </div>
+                        <div class="col-12 col-md-4">
+                        </div>
+                        <div class="col-12 col-md-4" style="margin-top: -20px;">
+                            <p class="card-text">Anda Dirujuk Ke</p>
+                            <h4 class="card-title" style="color: brown;"> {{item.peserta.poliRujukan.nama}}</h4>
+
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12 col-md-3 col-lg-4"></div>
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <button type="button" class="btn btn-relief-success mb-1" rippleEffect
+                                style="width:100%" (click)="cetakSep()">Cetak SEP
+                            </button>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12 col-md-3 col-lg-4"></div>
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <button type="button" class="btn btn-relief-warning mb-1" rippleEffect
+                                style="width:100%" (click)="cetakLabel(6)">Cetak Label
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- Modal -->
+<div class="modal-success d-inline-block">
+    <!-- Modal -->
+    <ng-template #modalSuccess let-modal>
+      <div class="modal-header">
+        <h5 class="modal-title" id="myModalLabel160">Silahkan Isi Form dibawah</h5>
+        <button type="button" class="close" (click)="modal.dismiss('Cross click')" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" tabindex="0" ngbAutofocus>
+        <form class="form form-horizontal" [formGroup]="formGroup">
+            <div class="row">
+                <div class="col-12">
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label">
+                            <label for="surkon">Rujukan</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <ng-select [items]="listRujukan" class="ng-select-size-sm" formControlName="frmRujukan" (change)="changefrmRujukan($event)">
+                            </ng-select>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label">
+                            <label for="surkon">Surat Kontrol</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <ng-select [items]="listSurkon" class="ng-select-size-sm" formControlName="frmSurkon">
+                            </ng-select>
+                        </div>
+                    </div>
+                </div>
+                <!-- <div class="col-12">
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label">
+                            <label for="dpjp">DPJP</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <ng-select [items]="listDPJP" class="ng-select-size-sm" bindLabel="nama" bindValue="kode" formControlName="frmDpjp">
+                            </ng-select>
+                        </div>
+                    </div>
+                </div> -->
+                <div class="col-12">
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label">
+                            <label for="tujuankunj">Tujuan Kunjungan</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <ng-select [items]="listTujuanKunj" class="ng-select-size-sm" bindLabel="name" bindValue="id" formControlName="frmTujuanKunj" (change)="changeTujuanKunj($event)">
+                            </ng-select>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12" *ngIf="isFlagProcedur">
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label">
+                            <label for="flagprocdur">Flag Procedur</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <ng-select [items]="listFlagProc" class="ng-select-size-sm" bindLabel="name" bindValue="id" formControlName="frmFlagProcedur" (change)="changeFlagProcedur($event)">
+                            </ng-select>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12" *ngIf="isPenunjang">
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label">
+                            <label for="penunjang">Penunjang</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <ng-select [items]="listPenunjang" class="ng-select-size-sm" bindLabel="name" bindValue="id" formControlName="frmPenunjang">
+                            </ng-select>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label">
+                            <label for="assesment">Assesment</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <ng-select [items]="listAssesment" class="ng-select-size-sm" bindLabel="name" bindValue="id" formControlName="frmAssesment">
+                            </ng-select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+          </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-success" (click)="buatSEP()" rippleEffect>
+          Buat SEP
+        </button>
+      </div>
+    </ng-template>
+    <!-- / Modal -->
+</div>
+<!-- End Modal -->
+
+<!-- Modal Loading -->
+<div id="overlay" [hidden]="!isLoadingScreen">
+    <button class="btn btn-flat-primary btn-lg" type="button" disabled rippleEffect>
+        <span class="spinner-grow spinner-grow-sm" role="status" aria-hidden="true"></span>
+        <span class="ml-25 align-middle">Loading...</span>
+    </button>
+</div>
+<!-- End Modal Loading -->

@@ -1,0 +1,350 @@
+<div class="row">
+    <div class="p-grid">
+        <div class="p-col-8 p-md-8 p-lg-8">
+            <div class="p-fluid p-formgrid ">
+                <div class="card card-w-title">
+                    <h2 style="color: #777777;">List Antrian</h2>
+                    <div class="p-col-12">
+                        <div class="card  no-pad" style="background-color: #e86056; min-height: 630px; max-height: 630px;">
+                            <div class="card-w-title card-pad">
+                                <div class="p-col-2" style="margin-left: -20px;">
+                                    <div class="p-fluid p-formgrid ">
+                                        <a class="f-s-5">Pilih Loket</a>
+                                        <div class="p-grid">
+                                            <div class="p-col-12">
+                                                <p-dropdown [(ngModel)]="item.loketparam" [options]="listLoket" defaultLabel="Nama Loket" optionLabel="label" [filter]="true" filterBy="label" [showClear]="true" appendTo="body" style="border-radius: 20px;">
+                                                </p-dropdown>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="p-col-5" style="margin-left: -300px;">
+                                    <div class="p-fluid p-formgrid ">
+                                        <a class="f-s-5">Kelompok Antrian</a>
+                                        <div class="p-grid">
+                                            <div class="p-col-12">
+                                                <p-dropdown [(ngModel)]="item.antrianparam" [options]="listAntrian" defaultLabel="Kelompok Antrian" optionLabel="label" [filter]="true" filterBy="label" [showClear]="true" appendTo="body" style="border-radius: 20px;" (onChange)="changeKelompok($event)">
+                                                </p-dropdown>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="p-col-2 p-md-2" style="float: right;margin-top:30px; margin-left: -50px;">
+                                    <button pButton type="button" class="p-button-danger p-btn-green-sedeng "
+                                        label="Refresh" style="float: right;margin-top: -10px;" (click)="refresh()"
+                                        icon="fa fa-refresh" pTooltip="Refresh Data" pRipple></button>
+                                </div>
+                            </div>
+                            <div class="card-2" style="min-height: 500px;">
+                                <div class="card-2-body">
+                                    <div class="p-grid">
+                                        <div class="p-col-12">
+                                            <p-table #dt [columns]="column" [value]="dataTable"
+                                                styleClass="p-datatable-customers" [rowHover]="true" [rows]="15"
+                                                [showCurrentPageReport]="true" [rowsPerPageOptions]="[5,10,25,50]"
+                                                [paginator]="true" scrollable="true" [pageLinks]="5"
+                                                selectionMode="single" (click)="onSelectAntrianList(rowData)">
+                                                <ng-template pTemplate="header" let-columns>
+                                                    <tr>
+                                                        <th *ngFor="let column of columns">
+                                                            {{column.header}} 
+                                                        </th>
+                                                    </tr>
+                                                </ng-template>
+                                                <ng-template pTemplate="body" let-rowData let-columns="columns"
+                                                    let-rowIndex="rowIndex">
+                                                    <tr [pSelectableRow]="rowData" [pSelectableRowIndex]="rowIndex" (click)="onSelectAntrianList(rowData)"> 
+                                                        <td *ngFor="let column of columns">
+                                                            <a *ngIf="column.field == 'sekarang'"
+                                                                href="javascript:void(0)"
+                                                                (click)="lihatDetail(rowData[columns[1].field])"
+                                                                style="text-decoration: underline;">
+                                                                {{rowData[column.field]}}
+                                                            </a>
+                                                            <span
+                                                                *ngIf="column.field != 'sekarang'">{{rowData[column.field]}}</span>
+                                                        </td>
+                                                    </tr>
+                                                </ng-template>
+                                            </p-table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+
+
+
+        <div class="p-col-4 p-md-4 p-lg-4">
+            <div class="p-fluid p-formgrid ">
+
+                <div class="card card-w-title">
+                    <div class="p-col-6 p-md-3 p-sm-6" style="float: right">
+                        <button pButton type="button" pRipple class="p-button-outlined p-button-secondary" label="Back"
+                            style="float: right;margin-top: -10px;" [routerLink]="['/index']" icon="fa fa-arrow-left"
+                            pTooltip="Kembali"></button>
+                    </div>
+                    <h2 style="color: #777777;">Caller</h2>
+                    <div class="p-col-12 p-md-12">
+                        <div class="p-grid">
+                            <div class="p-col-12 p-md-12">
+                                <div class="card  no-pad" style="background-color: #2582A1;">
+                                    <div class="card-w-title card-pad">
+                                        <h4>Panggil</h4>
+                                    </div>
+                                    <div class="card-2" style="height: 520px; overflow: auto;">
+                                        <div class="card-2-body">
+                                            <div class="p-grid">
+                                                <div class="p-col-12 p-md-12">
+                                                    <div class="p-col-12 text-center mb-3" style="margin-top: 80px; margin-bottom: 30px;">
+                                                        <p class="judul_rata antrian-akhir" style="font-size: 90px; font-weight: bold;">
+                                                            {{item.jenis}}{{item.noantri}}
+                                                        </p><br>
+                                                        <p class="judul_rata antrian-akhir" style="font-size: 40px; font-weight: bold;">
+                                                            {{item.user}}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div class="p-col-12 p-md-12">
+                                                    <div class="p-grid">
+                                                        <div class="p-col-12">
+                                                            <div class="p-grid">
+                                                                <div class="p-col-3">
+                                                                    <button pButton pRipple pRaised icon="pi pi-phone                                                                    "
+                                                                        type="button" label="Panggil"
+                                                                        class="p-button-raised p-button-success"
+                                                                        (click)="panggilCurrent(this.item.currentIndex)"
+                                                                        [loading]="isPanggil"
+                                                                        iconPos="left">
+                                                                    </button>
+                                                                </div>
+                                                                <div class="p-col-3">
+                                                                    <button pButton pRipple pRaised icon="pi pi-check                                                                    "
+                                                                        type="button" label="Finish"
+                                                                        class="p-button-raised p-button-help"
+                                                                        (click)="finish()"
+                                                                        [loading]="isPanggil"
+                                                                        iconPos="left">
+                                                                    </button>
+                                                                </div>
+                                                                <div class="p-col-3">
+                                                                    <button pButton pRipple pRaised icon="pi pi-eject"
+                                                                        type="button" label="Skip"
+                                                                        (click)="skipAntrian()"
+                                                                        class="p-button-raised p-button-danger"
+                                                                        [loading]="isPanggil"
+                                                                        iconPos="right">
+                                                                    </button>
+                                                                </div>
+                                                                <div class="p-col-3">
+                                                                    <button pButton pRipple pRaised icon="pi pi-angle-double-right                                                                    "
+                                                                        type="button" label="Special"
+                                                                        (click)="toBottom()"
+                                                                        class="p-button-raised p-button-info"
+                                                                        [loading]="isPanggil"
+                                                                        iconPos="right">
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                            </div>
+                                            <div class="p-grid" style="display: none !important">
+                                                <div class="p-col-12 p-md-5">
+                                                    <div class="p-grid">
+                                                        <div class="p-col-12">
+                                                            <label class="label" for="input">Shortcut</label>
+                                                        </div>
+                                                        <div class="p-col-12">
+                                                            <p-dropdown [(ngModel)]="item.dploket" [options]="listLoket"
+                                                                optionLabel="label" [filter]="true" filterBy="label"
+                                                                [showClear]="true" appendTo="body"
+                                                                (onChange)="onChangeSCL($event)"></p-dropdown>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="p-col-12 p-md-5">
+                                                    <div class="p-grid">
+                                                        <div class="p-col-12">
+                                                            <label class="label" for="input">Shortcut</label>
+                                                        </div>
+                                                        <div class="p-col-12">
+                                                            <p-dropdown [(ngModel)]="item.dpjenis"
+                                                                [options]="listCaller" optionLabel="label"
+                                                                [filter]="true" filterBy="label" [showClear]="true"
+                                                                appendTo="body"
+                                                                (onChange)="onChangeSCJ($event)"></p-dropdown>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="p-col-12 p-md-6" style="display: none !important">
+                                <div class="card  no-pad" style="background-color: #266569;">
+                                    <div class="card-w-title card-pad">
+                                        <h4>Panggil Ulang</h4>
+                                    </div>
+                                    <div class="card-2" style="height: 200px;
+                                    overflow: auto;">
+                                        <div class="card-2-body">
+                                            <div class="p-grid">
+                                                <div class="p-col-12 p-md-4">
+                                                    <label class="label" for="input">No Antrian</label>
+                                                    <input type="text" [(ngModel)]="item.noantri" pInputText
+                                                        placeholder="No Antrian" />
+                                                </div>
+                                                <div class="p-col-12 p-md-3" style="margin-top: 20px;">
+                                                    <button pButton type="submit" icon="fa fa-microphone"
+                                                        label="Panggil Ulang" class="p-button-warning p-btn-green-klot"
+                                                        pTooltip="Panggil Ulang" (click)="panggilUlang()"
+                                                        pRipple></button>
+                                                </div>
+                                                <div class="p-col-12 p-md-3" style="margin-top: 20px;">
+                                                    <button pButton type="submit" icon="fa fa-microphone"
+                                                        label="Panggil Ulang WNA"
+                                                        class="p-button-warning p-btn-green-klot"
+                                                        pTooltip="Panggil Ulang WNA" (click)="panggilUlangWNA()"
+                                                        pRipple></button>
+                                                </div>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+
+
+    </div>
+    <div class="p-grid">
+
+        <!-- belum dipanggil -->
+        
+
+        <!-- sudah dipanggil -->
+        <div class="p-col-12 p-md-12 p-lg-12" id="inispecial">
+            <div class="p-fluid p-formgrid ">
+                <div class="card card-w-title">
+                    <div class="p-col-12">
+                        <div class="card  no-pad" style="background-color: #5DC473;">
+                            <div class="card-w-title card-pad">
+                                <div class="p-col-6 p-md-11">
+                                    <h4>Antrian Special</h4>
+                                </div>
+                                <div class="p-col-3 p-md-2" style="float: right;margin-top:0px; margin-left: -500px; display: none !important">
+                                    <button pButton type="button" class="p-button-danger p-btn-green-sedeng "
+                                        label="Finish" style="float: right;margin-top: -10px;" (click)="finish()"
+                                        icon="fa fa-trash" pTooltip="Finish" pRipple></button>
+                                </div>
+                                <div class="p-col-3 p-md-2" style="float: left;margin-top:-8px; margin-left: -500px;">
+                                    <div class="input-group mb-2">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text"><i data-feather="search"></i></span>
+                                        </div>
+                                        <input type="text" [(ngModel)]="bookmarkText" pInputText placeholder="Cari.." />
+                                    </div>
+                                </div>
+                                <div class="p-col-3 p-md-2" style="float: right;margin-top:0px; margin-left: -120px; display: none !important">
+                                    <button pButton type="button" class="p-button-danger p-btn-green-sedeng "
+                                        label="Refresh" style="float: right;margin-top: -10px;" (click)="refresh()"
+                                        icon="fa fa-refresh" pTooltip="Refresh Data" pRipple></button>
+                                </div>
+                            </div>
+                            <div class="card-2">
+                                <div class="card-2-body">
+                                    <div class="p-grid">
+                                        <div class="p-col-12">
+                                            <p-table #dt [columns]="columnsudah" [value]="dataTableSudah"
+                                                styleClass="p-datatable-customers" [rowHover]="true" [rows]="10"
+                                                [showCurrentPageReport]="true" [rowsPerPageOptions]="[5,10,25,50]"
+                                                [paginator]="true" scrollable="true" [pageLinks]="5" 
+                                                selectionMode="single">
+                                                <ng-template pTemplate="header" let-columns>
+                                                    <tr>
+                                                        <th *ngFor="let column of columns">
+                                                            {{column.header}}
+                                                        </th>
+                                                    </tr>
+                                                </ng-template>
+                                                <ng-template pTemplate="body" let-rowData let-columns="columns"
+                                                    let-rowIndex="rowIndex">
+                                                    <tr [pSelectableRow]="rowData" [pSelectableRowIndex]="rowIndex"
+                                                        (click)="onSelectAntrianList(rowData)">
+                                                        <td *ngFor="let column of columns">
+                                                            <a *ngIf="column.field == 'sekarang'"
+                                                                href="javascript:void(0)"
+                                                                (click)="lihatDetail(rowData[columns[1].field])"
+                                                                style="text-decoration: underline;">
+                                                                {{rowData[column.field]}}
+                                                            </a>
+                                                            <span
+                                                                *ngIf="column.field != 'sekarang'">{{rowData[column.field]}}</span>
+                                                        </td>
+                                                    </tr>
+                                                </ng-template>
+                                            </p-table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- </p-panel> -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+
+    </div>
+</div>
+
+
+
+<p-dialog header="Detail Antrian Sudah Dipanggil" [(visible)]="showDetailAntrian" [modal]="true" [maximizable]="true"
+    [draggable]="true" [resizable]="true" [style]="{width: '50vw'}">
+    <div class="p-fluid p-formgrid ">
+        <div class="p-grid">
+            <div class="p-col-12">
+                <p-table #dt [columns]="columndetail" [value]="dataTableDetail" styleClass="p-datatable-customers"
+                    [rowHover]="true" [rows]="10" [showCurrentPageReport]="true" [rowsPerPageOptions]="[5,10,25,50]"
+                    [paginator]="true" scrollable="true" [pageLinks]="5" sortMode="multiple" selectionMode="single">
+                    <ng-template pTemplate="header" let-columns>
+                        <tr>
+                            <th *ngFor="let column of columns" pSortableColumn="{{column.field}}">
+                                {{column.header}} <p-sortIcon field="{{column.field}}">
+                                </p-sortIcon>
+                            </th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-rowData let-columns="columns" let-rowIndex="rowIndex">
+                        <tr [pSelectableRow]="rowData" [pSelectableRowIndex]="rowIndex">
+                            <td *ngFor="let column of columns">
+                                {{rowData[column.field]}}
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+    </div>
+</p-dialog>

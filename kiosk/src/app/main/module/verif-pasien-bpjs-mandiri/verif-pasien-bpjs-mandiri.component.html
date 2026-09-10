@@ -1,0 +1,123 @@
+<section>
+    <div class="row">
+        <div class="col-lg-8 border-1">
+            <form class="form-signin">
+                <div class="text-center mb-3">
+                    <img class="mb-3" src="assets/images/logo_only.png" alt="" width="120" height="120">
+                    <h1 class="mb-2 font-weight-bold">{{ coreConfig.app.appRumahSakit }}</h1>
+                    <p>Masukkan No RM / NIK / No BPJS</p>
+                </div>
+
+                <div class="form-label-group">
+                    <input type="text" id="frmIdentitas" class="form-control" [(ngModel)]="item.frmIdentitas"
+                        name="frmIdentitas" autocomplete="off" style="text-align: center;">
+                </div>
+                <button class="btn btn-lg btn-success btn-block" (click)="cariDataPasien()"
+                    *ngIf="!isLoadingHalAwal">Selanjutnya</button>
+                    <div class="row col-12 m-0 p-0 mt-1 mb-1" *ngIf="isLoadingHalAwal">
+                        <div class="col-6 pl-0 pr-0">
+                            <button class="btn btn-lg btn-info btn-block" (click)="openExternalFile()"
+                                *ngIf="isnotfinger">Sidik Jari</button>
+                        </div>
+                        <div class="{{btn_col}} pr-0">
+                            <button class="btn btn-lg btn-success btn-block" (click)="simpanBridging()"
+                                *ngIf="isfinger">Selanjutnya</button>
+                        </div>
+                    </div>
+
+
+                <!-- <button class="btn btn-lg btn-success btn-block" [disabled]="isLoadingHalAwal" *ngIf="isLoadingHalAwal">
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span class="ml-25 align-middle">Loading...</span>
+                </button> -->
+                <button class="btn btn-lg btn-danger btn-block" (click)="goToTouchscreen()">Kembali</button>
+            </form>
+        </div>
+        <div class="col-lg-4 border-1">
+            <!-- <h1 class="text-left"><b>Validasi Data Anda</b></h1> -->
+            <h1 class="text-center font-weight-bold pt-1" *ngIf="validasi_data">Validasi Data Anda</h1>
+            <h1 class="text-center font-weight-bold pt-1" *ngIf="!validasi_data">Informasi</h1>
+            <!-- <hr> -->
+
+            <div class="card card-body mb-1 mt-1" *ngIf="validasi_data">
+                <div class="row col-12">
+                    <h6 class="col-4">NAMA</h6>
+                    <h6 class="col-8">: {{item.peserta.nama}}</h6>
+                </div>
+                <div class="row col-12">
+                    <h6 class="col-4">JK</h6>
+                    <h6 class="col-8">: {{item.peserta.sex == "P" ? "Perempuan" : "Laki-Laki"}}</h6>
+                </div>
+                <div class="row col-12">
+                    <h6 class="col-4">NO. RM</h6>
+                    <h6 class="col-8">: {{item.peserta.mr.noMR}}</h6>
+                </div>
+                <div class="row col-12">
+                    <h6 class="col-4">NIK</h6>
+                    <h6 class="col-8">: {{item.peserta.nik}}</h6>
+                </div>
+                <div class="row col-12">
+                    <h6 class="col-4">NO. BPJS</h6>
+                    <h6 class="col-8">: {{item.peserta.noKartu}}</h6>
+                </div>
+            </div>
+            <!-- <hr class="dashed-line"> -->
+            <div class="card card-body" *ngIf="validasi_data">
+                <div class="row col-12">
+                    <h6 class="col-4">No. Rujukan</h6>
+                    <h6 class="col-8">: {{ item.suratkontrol.sep.provPerujuk.noRujukan }}</h6>
+                </div>
+                <div class="row col-12">
+                    <h6 class="col-4">No. Kontrol</h6>
+                    <h6 class="col-8">: {{ item.suratkontrol.noSuratKontrol }}</h6>
+                </div>
+                <div class="row col-12">
+                    <h6 class="col-4">PPK Asal</h6>
+                    <h6 class="col-8">: {{ item.suratkontrol.sep.provPerujuk.nmProviderPerujuk }}</h6>
+                </div>
+                <div class="row col-12">
+                    <h6 class="col-4">Sub/Spesialis</h6>
+                    <h6 class="col-8">: {{ item.suratkontrol.namaPoliTujuan }}</h6>
+                </div>
+                <div class="row col-12">
+                    <h6 class="col-4">Dokter</h6>
+                    <h6 class="col-8">: {{ item.suratkontrol.namaDokter }}</h6>
+                </div>
+                <div class="row col-12">
+                    <h6 class="col-4">Diagnosa</h6>
+                    <h6 class="col-8">: {{ item.suratkontrol.sep.diagnosa }}</h6>
+                </div>
+                <div class="row col-12">
+                    <h6 class="col-4">Status Kecelakaan</h6>
+                    <h6 class="col-8">: Bukan Kecelakaan</h6>
+                </div>
+                <div class="row col-12">
+                    <h6 class="col-4">Tujuan Kunjungan</h6>
+                    <h6 class="col-8">: Normal</h6>
+                </div>
+            </div>
+
+            <div class="col-12" *ngIf="!validasi_data">
+                <p>
+                    <li>Silahkan masukkan nomor rekam medis / nomor bpjs / nik terlebih dahulu pada kolom yang terdapat
+                        di sebelah kiri
+                        layar</li>
+                    <li>Pastikan nomor yang anda masukkan sudah sesuai</li>
+                    <li>Tekan tombol "Selanjutnya", jika berhasil semua data anda akan tampil di sebelah kanan layar
+                    </li>
+                    <li>Semua pasien BPJS diwajibkan untuk melakukan <b>verifikasi sidik jari</b> terlebih dahulu</li>
+                    <li>Pastikan data yang anda pilih sesuai sebelum melanjutkan</li>
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Modal Loading -->
+<div id="overlay" [hidden]="!isLoadingScreen">
+    <button class="btn btn-flat-primary btn-lg" type="button" disabled rippleEffect>
+        <span class="spinner-grow spinner-grow-sm" role="status" aria-hidden="true"></span>
+        <span class="ml-25 align-middle">Loading...</span>
+    </button>
+</div>
+<!-- End Modal Loading -->

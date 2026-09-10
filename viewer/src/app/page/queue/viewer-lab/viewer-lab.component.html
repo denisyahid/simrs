@@ -1,0 +1,158 @@
+<div class="layout-dashboard">
+  <div class="p-grid">
+    <div class="p-col-12">
+      <div class="notification"
+        style="display: flex;align-items: center;justify-content: space-between;background-color: var(--primary);">
+        <div style="display: flex;align-items: center;">
+          <img src="assets/img/logo_only.png" style="height: 50px;margin-left: 20px;">
+          <h3 style="margin-left: 20px;margin-top:0;margin-bottom: 0;color:white"> RSUD BALI MANDARA</h3>
+        </div>
+        <p class="subtitle" style="float:right;margin-right: 20px;">
+          <button pButton type="button" icon="fa fa-expand" class="p-button-rounded p-mr-2"
+            style="background: var(--secondary);border-color:var(--secondary)" (click)="openFullscreen()"
+            pTooltip="Fullscreeen" label="" *ngIf="!isFullscreen"></button>
+          <button pButton type="button" icon="fa fa-compress" class="p-button-rounded p-mr-2"
+            style="background: var(--secondary);border-color:var(--secondary)" (click)="closeFullscreen()"
+            pTooltip="Fullscreeen" label="" *ngIf="isFullscreen"></button>
+        </p>
+      </div>
+    </div>
+
+    <div class="p-col-12 p-md-4">
+      <div class="p-col-12 p-lg-12" style="margin-bottom:10px">
+        <div class="card">
+          <div class="p-grid">
+            <div class="p-col-12 widget-customer-carousel">
+              <div class="card p-zero bg-gradient-danger">
+                <div class="card-item-content">
+                  <img class="card-img-absolute"
+                    src=" data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDIyLjEuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IgoJIHZpZXdCb3g9IjAgMCAxNTMgMTg3IiBzdHlsZT0iZW5hYmxlLWJhY2tncm91bmQ6bmV3IDAgMCAxNTMgMTg3OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+CjxzdHlsZSB0eXBlPSJ0ZXh0L2NzcyI+Cgkuc3Qwe29wYWNpdHk6MC4yO2ZpbGw6I0ZGRkZGRjt9Cjwvc3R5bGU+CjxnPgoJPHRpdGxlPjM8L3RpdGxlPgoJPGRlc2M+Q3JlYXRlZCB3aXRoIFNrZXRjaC48L2Rlc2M+Cgk8ZyBpZD0iTWFzay1feDJCXy1NYXNrLU1hc2siIHRyYW5zZm9ybT0idHJhbnNsYXRlKDE0LjAwMDAwMCwgMC4wMDAwMDApIj4KCQk8ZyBpZD0iTWFzayI+CgkJPC9nPgoJCTxnIGlkPSJNYXNrXzFfIj4KCQkJPHBhdGggY2xhc3M9InN0MCIgZD0iTTEzOCwxNDEuMmMtMy42LDAuNS03LjMsMC44LTExLDAuOGMtMjkuNiwwLTU1LjQtMTYuNS02OC42LTQwLjljLTYtMTEtOS40LTIzLjctOS40LTM3LjEKCQkJCWMwLTI2LjUsMTMuMi00OS45LDMzLjQtNjRIMTM4djEyOS41Ii8+CgkJPC9nPgoJCTxnIGlkPSJNYXNrXzJfIj4KCQkJPHBhdGggY2xhc3M9InN0MCIgZD0iTTEzOCwxNDEuMlYxODdILTE1YzAuMi00My4zLDMxLjktNzkuMSw3My40LTg1LjljNC42LTAuOCw5LjMtMS4xLDE0LjEtMS4xYzI2LjEsMCw0OS41LDExLjQsNjUuNSwyOS41Ii8+CgkJPC9nPgoJPC9nPgo8L2c+Cjwvc3ZnPgo="
+                    alt="">
+
+                  <div class="custom-label f-sm">0029123</div>
+                  <div class="custom-label f-lg w-800">Abraham Lincon</div>
+                  <hr>
+                  <div class="custom-label f-xs">Nama Dokter</div>
+                  <!-- <div class="custom-label f-sm w-800"></div> -->
+                </div>
+                <div class="cardfooter text-center w-800">Lab Prostodinti</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="p-col-12 p-lg-12" style="margin-bottom: 10px;">
+        <div class="card">
+          <div class="p-grid">
+            <div class="p-col-12 widget-customer-carousel">
+              <div class="card p-zero bg-gradient-danger">
+                <div class="card-item-content">
+                  <img class="card-img-absolute"
+                    src=" data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDIyLjEuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IgoJIHZpZXdCb3g9IjAgMCAxNTMgMTg3IiBzdHlsZT0iZW5hYmxlLWJhY2tncm91bmQ6bmV3IDAgMCAxNTMgMTg3OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+CjxzdHlsZSB0eXBlPSJ0ZXh0L2NzcyI+Cgkuc3Qwe29wYWNpdHk6MC4yO2ZpbGw6I0ZGRkZGRjt9Cjwvc3R5bGU+CjxnPgoJPHRpdGxlPjM8L3RpdGxlPgoJPGRlc2M+Q3JlYXRlZCB3aXRoIFNrZXRjaC48L2Rlc2M+Cgk8ZyBpZD0iTWFzay1feDJCXy1NYXNrLU1hc2siIHRyYW5zZm9ybT0idHJhbnNsYXRlKDE0LjAwMDAwMCwgMC4wMDAwMDApIj4KCQk8ZyBpZD0iTWFzayI+CgkJPC9nPgoJCTxnIGlkPSJNYXNrXzFfIj4KCQkJPHBhdGggY2xhc3M9InN0MCIgZD0iTTEzOCwxNDEuMmMtMy42LDAuNS03LjMsMC44LTExLDAuOGMtMjkuNiwwLTU1LjQtMTYuNS02OC42LTQwLjljLTYtMTEtOS40LTIzLjctOS40LTM3LjEKCQkJCWMwLTI2LjUsMTMuMi00OS45LDMzLjQtNjRIMTM4djEyOS41Ii8+CgkJPC9nPgoJCTxnIGlkPSJNYXNrXzJfIj4KCQkJPHBhdGggY2xhc3M9InN0MCIgZD0iTTEzOCwxNDEuMlYxODdILTE1YzAuMi00My4zLDMxLjktNzkuMSw3My40LTg1LjljNC42LTAuOCw5LjMtMS4xLDE0LjEtMS4xYzI2LjEsMCw0OS41LDExLjQsNjUuNSwyOS41Ii8+CgkJPC9nPgoJPC9nPgo8L2c+Cjwvc3ZnPgo="
+                    alt="">
+
+                  <div class="custom-label f-sm">0029123</div>
+                  <div class="custom-label f-lg w-800">Abraham Lincon</div>
+                  <hr>
+                  <div class="custom-label f-xs">Nama Dokter</div>
+                  <!-- <div class="custom-label f-sm w-800"></div> -->
+                </div>
+                <div class="cardfooter text-center w-800">Lab Prostodinti</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="p-col-12 p-lg-12">
+        <div class="card">
+          <div class="p-grid">
+            <div class="p-col-12 widget-customer-carousel">
+              <div class="card p-zero bg-gradient-danger">
+                <div class="card-item-content">
+                  <img class="card-img-absolute"
+                    src=" data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDIyLjEuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IgoJIHZpZXdCb3g9IjAgMCAxNTMgMTg3IiBzdHlsZT0iZW5hYmxlLWJhY2tncm91bmQ6bmV3IDAgMCAxNTMgMTg3OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+CjxzdHlsZSB0eXBlPSJ0ZXh0L2NzcyI+Cgkuc3Qwe29wYWNpdHk6MC4yO2ZpbGw6I0ZGRkZGRjt9Cjwvc3R5bGU+CjxnPgoJPHRpdGxlPjM8L3RpdGxlPgoJPGRlc2M+Q3JlYXRlZCB3aXRoIFNrZXRjaC48L2Rlc2M+Cgk8ZyBpZD0iTWFzay1feDJCXy1NYXNrLU1hc2siIHRyYW5zZm9ybT0idHJhbnNsYXRlKDE0LjAwMDAwMCwgMC4wMDAwMDApIj4KCQk8ZyBpZD0iTWFzayI+CgkJPC9nPgoJCTxnIGlkPSJNYXNrXzFfIj4KCQkJPHBhdGggY2xhc3M9InN0MCIgZD0iTTEzOCwxNDEuMmMtMy42LDAuNS03LjMsMC44LTExLDAuOGMtMjkuNiwwLTU1LjQtMTYuNS02OC42LTQwLjljLTYtMTEtOS40LTIzLjctOS40LTM3LjEKCQkJCWMwLTI2LjUsMTMuMi00OS45LDMzLjQtNjRIMTM4djEyOS41Ii8+CgkJPC9nPgoJCTxnIGlkPSJNYXNrXzJfIj4KCQkJPHBhdGggY2xhc3M9InN0MCIgZD0iTTEzOCwxNDEuMlYxODdILTE1YzAuMi00My4zLDMxLjktNzkuMSw3My40LTg1LjljNC42LTAuOCw5LjMtMS4xLDE0LjEtMS4xYzI2LjEsMCw0OS41LDExLjQsNjUuNSwyOS41Ii8+CgkJPC9nPgoJPC9nPgo8L2c+Cjwvc3ZnPgo="
+                    alt="">
+
+                  <div class="custom-label f-sm">0029123</div>
+                  <div class="custom-label f-lg w-800">Abraham Lincon</div>
+                  <hr>
+                  <div class="custom-label f-xs">Nama Dokter</div>
+                  <!-- <div class="custom-label f-sm w-800"></div> -->
+                </div>
+                <div class="cardfooter text-center w-800">Lab Prostodinti</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+        <!-- <div class="p-col-12 p-md-12  widget-customer-carousel" (click)="showPop()">
+          <div class="card text-center" style="cursor: pointer;">
+            <p-scrollPanel [style]="{width: '100%', height: 'calc(100vh - 600px)'}">
+              <div class="video-player-wrapper">
+                <iframe [src]='safeURL' frameborder="0" width="100%" style="height:calc(100vh - 600px)" allow='autoplay'
+                  allowfullscreen></iframe>
+              </div>
+            </p-scrollPanel>
+          </div>
+        </div> -->
+    </div>
+
+    <div class="p-col-12 p-md-8">
+      <div class="cards timeline">
+        <div class="card-header">
+          <div class="card-title">
+            <h6> List Antrian Laboratorium</h6>
+
+          </div>
+          <p class="subtitle"> <i class="pi pi-clock"></i></p>
+        </div>
+        <div class="card-body">
+          <div class="p-grid">
+            <div class="p-col-12">
+              <p-scrollPanel [style]="{width: '100%', height: 'calc(100vh - 320px)'}">
+                <p-table [value]="dataSource" styleClass="p-datatable-customers" [rowHover]="true" scrollable="true">
+                  <ng-template pTemplate="header">
+                    <tr>
+                      <th width="80px">No Antri </th>
+                      <th width="100px">No CM </th>
+                      <th width="125px">No Registrasi </th>
+                      <th width="200px">Pasien</th>
+                      <th width="100px">Status</th>
+                    </tr>
+                  </ng-template>
+                  <ng-template pTemplate="body" let-items>
+
+                    <tr [ngClass]="{'row-kosong': items.tersedia == 0}">
+                      <td width="80px">
+                        <span class="p-column-title">{{items.noantrian}}</span>
+                      
+                      </td>
+                      <td width="100px">
+                        <span class="p-column-title">{{items.nocm}}</span>
+                       
+                      </td>
+                      <td width="125px">
+                        <span class="p-column-title">{{items.noregistrasi}}</span>
+                      </td>
+                      <td width="200px">
+                        <span class="p-column-title">{{items.namapasien}}</span>
+                      </td>
+                      <td width="100px">
+                        <!-- <span class="p-column-title">Status </span> -->
+                        <span class="p-tag p-tag-success">
+                          {{items.statusantrian == 0 ? 'Belum Dipanggil' : 'Sudah Dipanggil'}}</span>
+                      </td>
+
+                    </tr>
+                  </ng-template>
+                </p-table>
+              </p-scrollPanel>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

@@ -1,0 +1,169 @@
+<div class="container" style="text-align: center;">
+    <div class="p-grid">
+        <div class="p-col-12 p-md-12 p-sm-12">
+            <div class="topbars">
+                <img class="img-responsive img-logo-index" style="width:100px" src="assets/img/logo_only.png">
+                <p class="f-s-3" style="font-size: 2rem; font-weight: bold;">{{namaProfile}} | {{brand}} Queuing System
+                </p>
+            </div>
+        </div>
+
+    </div>
+    <div class="p-grid">
+        <div class="p-col-12 p-md-12 p-sm-12">
+            <img class="img-responsive img-illustration-index" style="height: 100%" src="assets/img/bg.png">
+        </div>
+    </div>
+    <div class="p-grid" style="text-align: center;">
+        <div class="p-col-12 p-md-4 p-sm-3">
+            <div class="button-caller" style="background: hsl(261 32% 55%);" (click)="showCaller = true" pTooltip="Pemanggil Antrian">
+                <a class="f-s-5">Pemanggil</a>
+            </div>
+        </div>
+        <div class="p-col-12 p-md-4 p-sm-3">
+            <div class="button-viewer" style="background: hsl(198 100% 61%);" (click)="showLoket = true" pTooltip="Viewer Pendaftaran">
+                <a class="f-s-5">Pendaftaran</a>
+            </div>
+            <!-- <div class="button-viewer" [routerLink]="['/viewer']" pTooltip="Viewer Pendaftaran">
+                <a class="f-s-5">Pendaftaran</a>
+            </div> -->
+        </div>
+        <div class="p-col-12 p-md-4 p-sm-3">
+            <!-- <div class="button-viewer2" [routerLink]="['/viewer-poli/698,662,688,693,694,676']"  pTooltip="Viewer Poli">
+                <a class="f-s-5">Poli</a>
+            </div> -->
+            <div class="button-viewer2"  style="background: hsl(19 100% 75%)"  (click)="showPoli = true" pTooltip="Viewer Poli">
+                <a class="f-s-5">Poli</a>
+            </div>
+        </div>
+        <div class="p-col-12 p-md-4 p-sm-3">
+            <!-- <div class="button-viewer2" [routerLink]="['/viewer-poli/698,662,688,693,694,676']"  pTooltip="Viewer Poli">
+                <a class="f-s-5">Poli</a>
+            </div> -->
+            <div class="button-viewer3"   style="background: hsl(113 59% 71%)"  (click)="showFarmasi = true" pTooltip="Viewer Farmasi">
+                <a class="f-s-5">Farmasi</a>
+            </div>
+        </div>
+        <div class="p-col-12 p-md-4 p-sm-3">
+            <div class="button-viewer" [routerLink]="['/viewer-operasi']" pTooltip="Operasi">
+                <a class="f-s-5">Operasi</a>
+            </div>
+        </div>
+
+        <div class="p-col-12 p-md-4 p-sm-3">
+            <div class="button-viewer" [routerLink]="['/viewer-kamar']" pTooltip="Informasi Tempat Tidur" style="background: #b22fa3;">  
+                <a class="f-s-5">Informasi Bed</a>
+            </div>
+        </div>
+        <div class="p-col-12 p-md-12 p-sm-3">
+            <div class="button-caller" style="background: #49243E;;" (click)="showLab = true"
+                pTooltip="Pemanggil Antrian">
+                <a class="f-s-5">Lab</a>
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+<p-dialog header="Pilih Poli" [(visible)]="showPoli" [modal]="true" [maximizable]="true" [draggable]="true"
+    [resizable]="true" [style]="{width: '70vw'}">
+    <div class="p-fluid p-formgrid ">
+        <div class="p-grid">
+            <div class="p-col-12">
+                <p-multiSelect [options]="listPoli" [(ngModel)]="poli" defaultLabel="Nama Poli"
+                    optionLabel="namaruangan" appendTo="body" display="chip">
+                </p-multiSelect>
+            </div>
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button icon="pi pi-save" (click)="save(poli)" label="Lanjut" class="ui-button-success">
+        </p-button>
+    </ng-template>
+</p-dialog>
+
+<p-dialog header="Pilih Depo" [(visible)]="showFarmasi" [modal]="true" [maximizable]="true" [draggable]="true"
+    [resizable]="true" [style]="{width: '70vw'}">
+    <div class="p-fluid p-formgrid ">
+        <div class="p-grid">
+            <div class="p-col-12">
+                <p-multiSelect [options]="listFarmasi" [(ngModel)]="farmasi" defaultLabel="Nama Depo"
+                    optionLabel="namaruangan" appendTo="body" display="chip">
+                </p-multiSelect>
+            </div>
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button icon="pi pi-save" (click)="saveFarma(farmasi)" label="Lanjut" class="ui-button-success">
+        </p-button>
+    </ng-template>
+</p-dialog>
+
+<p-dialog header="Pilih Laboratorium" [(visible)]="showLab" [modal]="true" [maximizable]="true" [draggable]="true"
+    [resizable]="true" [style]="{width: '70vw'}">
+    <div class="p-fluid p-formgrid ">
+        <div class="p-grid">
+            <div class="p-col-12">
+                <p-multiSelect [options]="listLab" [(ngModel)]="laborat" defaultLabel="Nama Laboratorium"
+                    optionLabel="namaruangan" appendTo="body" display="chip">
+                </p-multiSelect>
+            </div>
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button icon="pi pi-save" (click)="saveLab(laborat)" label="Lanjut" class="ui-button-success">
+        </p-button>
+    </ng-template>
+</p-dialog>
+
+<p-dialog header="Pilih Loket" [(visible)]="showLoket" [modal]="true" [maximizable]="true" [draggable]="true"
+    [resizable]="true" [style]="{width: '30vw'}">
+    <div class="p-fluid p-formgrid ">
+        <div class="p-grid">
+            <div class="p-col-12">
+                <p-multiSelect [options]="listLoket" [(ngModel)]="loket" defaultLabel="Nama Loket" optionLabel="label"
+                    appendTo="body" display="chip">
+                </p-multiSelect>
+            </div>
+        </div>
+    </div>
+    <a class="f-s-5">Language</a>
+    <div class="p-fluid p-formgrid ">
+        <div class="p-grid">
+            <div class="p-col-12">
+                <p-dropdown [(ngModel)]="bahasa" [options]="listBahasa" optionLabel="label" [filter]="true" filterBy="label" [showClear]="true" appendTo="body"></p-dropdown>
+            </div>
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button icon="pi pi-save" (click)="saveLoket(loket, bahasa)" label="Lanjut" class="ui-button-success">
+        </p-button>
+    </ng-template>
+</p-dialog>
+
+<p-dialog header="Pilih Caller" [(visible)]="showCaller" [modal]="true" [maximizable]="true" [draggable]="true"
+    [resizable]="true" [style]="{width: '30vw'}">
+    <div class="p-fluid p-formgrid ">
+        <a class="f-s-5">Pilih Loket</a>
+        <div class="p-grid">
+            <div class="p-col-12">
+                <p-dropdown [(ngModel)]="loket" [options]="listLoket" defaultLabel="Nama Loket" optionLabel="label" [filter]="true" filterBy="label" [showClear]="true" appendTo="body">
+                </p-dropdown>
+            </div>
+        </div>
+    </div>
+    <div class="p-fluid p-formgrid ">
+        <a class="f-s-5">Kelompok Antrian</a>
+        <div class="p-grid">
+            <div class="p-col-12">
+                <p-multiSelect [options]="listAntrian" [(ngModel)]="antrian" defaultLabel="Kelompok Antrian" optionLabel="label"
+                    appendTo="body" display="chip">
+                </p-multiSelect>
+            </div>
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button icon="pi pi-save" (click)="saveCaller(loket, antrian)" label="Lanjut" class="ui-button-success">
+        </p-button>
+    </ng-template>
+</p-dialog>

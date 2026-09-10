@@ -1,0 +1,83 @@
+import { HttpClient } from '@angular/common/http';
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
+import { Router } from '@angular/router';
+import { ToastrService } from 'ngx-toastr';
+import { HttpService } from '../../module/httpService';
+import { ActivatedRoute } from '@angular/router';
+
+@Component({
+  selector: 'app-self-regis',
+  templateUrl: './self-regis.component.html',
+  styleUrls: ['./self-regis.component.scss'],
+  encapsulation: ViewEncapsulation.None
+})
+export class SelfRegisComponent implements OnInit {
+  contentHeader: any
+  loketId: any;
+  isPasienlama: false;
+  jenis: any;
+  jenisBaruLama: any;
+  sub: any;
+  paramData: any;
+  constructor(private router: Router,
+    private httpService: HttpService,
+    private http: HttpClient,
+    private route: ActivatedRoute,
+    private alertService: ToastrService) { }
+
+  ngOnInit(): void {
+    this.sub = this.route
+      .queryParams
+      .subscribe(params => {
+        // Defaults to 0 if no query param provided.
+        this.paramData = JSON.parse(atob(params['data']));
+        this.isPasienlama = this.paramData.isPasienLama;
+        this.jenisBaruLama = this.paramData.jenisBaruLama;
+        this.contentHeader = {
+          headerTitle: 'Pasien ' + this.jenisBaruLama,
+          actionButton: true,
+          breadcrumb: {
+            type: '',
+            links: [
+              {
+                name: 'Menu Utama',
+                isLink: true,
+                link: '/v2/touchscreen'
+              },
+
+            ]
+          }
+        };
+      });
+  }
+  changePage(url) {
+    if (url == 'false') {
+      this.alertService.info('', 'Mohon Lakukan Registrasi melalui Loket Pendaftaran !', {
+        toastClass: 'toast ngx-toastr',
+        closeButton: true,
+        positionClass: 'toast-bottom-center'
+      });
+      // this.alertService.info('Informasi','Mohon Lakukan Registrasi melalui Loket Pendaftaran !')
+      return
+    }
+    if (url == 'BPJS')
+      this.router.navigate(["v2/touchscreen/self-regis/verif-pasien-bpjs"], { queryParams: { page: url } })
+    else
+      this.router.navigate(["v2/touchscreen/self-regis/verif-pasien"], { queryParams: { page: url } })
+  }
+
+  print(jenis) {
+    let antrian = {
+      "jenis": jenis
+    }
+    this.httpService.post('medifirst2000/kiosk/save-antrian', antrian).subscribe(response => {
+      this.http.get('http://127.0.0.1:1237/printvb/cetak-antrian?cetak=1&norec=' + response.noRec).subscribe(result => {
+        // do something with response
+      })
+
+    }, error => {
+
+    })
+    window.history.back()
+  }
+}
