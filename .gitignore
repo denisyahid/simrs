@@ -20,3 +20,7 @@ yarn-debug.log*
 Thumbs.db
 # hasil antara analisa database (dibuat ulang oleh tools/analisa/extract.py)
 /tools/analisa/out/
+
+# cache Python
+__pycache__/
+*.pyc
