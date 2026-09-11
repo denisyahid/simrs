@@ -1041,7 +1041,6 @@ $mongoRes = emrFetchFromMongo($norec_pd, $kdProfile, $mongoCollection, $mongoDb,
 $rawItems = $mongoRes['items'];
 $source   = 'mongodb';
 $sourceLabel = 'MongoDB ' . $mongoDb . '.' . $mongoCollection;
-$limited  = false;
 $sourceError = $mongoRes['error'];
 $workingToken = '';
 
@@ -1107,7 +1106,6 @@ if (empty($rawItems)) {
     if (!empty($rawItems)) {
         $source      = 'postgres';
         $sourceLabel = 'Database SIMRS (emrpasien_t + logginguser_t + emr_t)';
-        $limited     = true;
         $sourceError = '';
     } elseif ($pgRes['error']) {
         $sourceError = ($sourceError !== '' ? $sourceError . ' | ' : '') . 'postgres: ' . $pgRes['error'];
@@ -1223,28 +1221,16 @@ if ($qSearch !== '') {
 // token untuk link cetak: pakai token yang terbukti valid (bila ada)
 $tokenCetak = $workingToken !== '' ? $workingToken : ($tokenFromUrl !== '' ? $tokenFromUrl : $tokenDefault);
 
-// warna ikon (mirip VIconBox pada frontend)
-$listColor = array('info', 'success', 'warning', 'danger', 'purple', 'orange', 'primary', 'blue', 'green', 'indigo');
-$colorHex  = array(
-    'info'    => array('bg' => '#dbeafe', 'fg' => '#1d4ed8'),
-    'success' => array('bg' => '#d1fae5', 'fg' => '#047857'),
-    'warning' => array('bg' => '#fef3c7', 'fg' => '#b45309'),
-    'danger'  => array('bg' => '#fee2e2', 'fg' => '#b91c1c'),
-    'purple'  => array('bg' => '#ede9fe', 'fg' => '#6d28d9'),
-    'orange'  => array('bg' => '#ffedd5', 'fg' => '#c2410c'),
-    'primary' => array('bg' => '#e0e7ff', 'fg' => '#4338ca'),
-    'blue'    => array('bg' => '#dbeafe', 'fg' => '#2563eb'),
-    'green'   => array('bg' => '#dcfce7', 'fg' => '#15803d'),
-    'indigo'  => array('bg' => '#e0e7ff', 'fg' => '#4338ca'),
-);
-
-// cetak cepat (collection -> label tombol)
+// cetak cepat (kunci HARUS lowercase — dicocokkan dengan strtolower(nama collection))
+// Label tombol dibuat singkat tanpa penjelasan singkatan; nama lengkap hanya
+// muncul sebagai tooltip (atribut title).
 $quickPrintMap = array(
-    'suratpermintaandirawat' => array('collection' => 'SuratPermintaanDirawat',  'label' => 'Cetak SPRI',            'color' => 'bg-green-600 hover:bg-green-700',     'icon' => 'fas fa-file-medical-alt'),
-    'laporanOperasi' => array('collection' => 'LaporanOperasi',  'label' => 'Cetak Laporan Operasi',            'color' => 'bg-green-600 hover:bg-green-700',     'icon' => 'fas fa-file-medical-alt'),
-    'rujukanpasien'          => array('collection' => 'RujukanPasien',           'label' => 'Cetak Rujukan Manual',  'color' => 'bg-red-600 hover:bg-red-700',         'icon' => 'fas fa-print'),
-    'resumemedis'            => array('collection' => 'resumeMedis',             'label' => 'Cetak Resume Medis',    'color' => 'bg-emerald-600 hover:bg-emerald-700', 'icon' => 'fas fa-notes-medical'),
-    'ringkasankeluar'        => array('collection' => 'RingkasanKeluar',         'label' => 'Cetak Ringkasan Pulang','color' => 'bg-indigo-600 hover:bg-indigo-700',   'icon' => 'fas fa-file-alt'),
+    'suratpermintaandirawat' => array('collection' => 'SuratPermintaanDirawat', 'label' => 'SPRI',             'full' => 'Surat Permintaan Dirawat (SPRI)'),
+    'laporanoperasi'         => array('collection' => 'laporanOperasi',         'label' => 'Laporan Operasi',  'full' => 'Laporan Operasi'),
+    'laporanobservasi'       => array('collection' => 'laporanObservasi',       'label' => 'Laporan Observasi','full' => 'Laporan Observasi'),
+    'rujukanpasien'          => array('collection' => 'RujukanPasien',          'label' => 'Rujukan',          'full' => 'Rujukan Pasien'),
+    'resumemedis'            => array('collection' => 'resumeMedis',            'label' => 'Resume Medis',     'full' => 'Resume Medis'),
+    'ringkasankeluar'        => array('collection' => 'RingkasanKeluar',        'label' => 'Ringkasan Pulang', 'full' => 'Ringkasan Keluar / Pulang'),
 );
 $latestByCollection = array();
 foreach ($listEmr as $it) {
@@ -1265,64 +1251,91 @@ if ($emr_surat_fk !== '' && !isset($latestByCollection['suratpermintaandirawat']
         'noregistrasi' => $noregistrasi,
     );
 }
+
+// Susun tombol cetak cepat (hanya untuk dokumen yang ada).
+// Label singkat tanpa penjelasan singkatan; posisi tombol di paling atas modal.
+$quickHtml = '';
+foreach ($quickPrintMap as $key => $meta) {
+    if (!isset($latestByCollection[$key])) {
+        continue;
+    }
+    $it   = $latestByCollection[$key];
+    $fk   = $it['emrpasienfk'];
+    $nore = !empty($it['noregistrasi']) ? $it['noregistrasi'] : $noregistrasi;
+    if ($fk === '' || $nore === '') {
+        continue;
+    }
+    $url = emrBuildCetakUrl($apiBase, $meta['collection'], $fk, $nore, $userCetak, $kdProfile, $tokenCetak);
+    $url = str_replace('http://localhost', 'http://192.168.22.81', $url);
+    $quickHtml .= '<a href="' . htmlspecialchars($url) . '" target="_blank" '
+        . 'title="' . htmlspecialchars($meta['full']) . '" class="qp-btn">'
+        . '<i class="fas fa-print"></i> ' . htmlspecialchars($meta['label']) . '</a>';
+}
 ?>
 <style>
 .emr-wrap { font-size: 0.875rem; }
-.emr-card-wrap { max-height: 460px; overflow-y: auto; }
-.emr-item {
-    display: flex; align-items: center; gap: 0.75rem;
-    padding: 0.65rem 0.5rem; border-bottom: 1px solid #e5e7eb;
+
+/* ---- Cetak Cepat (baris tombol di atas modal) ---- */
+.qp-wrap {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem;
+    background: #f9fafb; border: 1px solid #f3f4f6; border-radius: 0.5rem;
+    padding: 0.5rem 0.65rem; margin-bottom: 0.6rem;
 }
-.emr-item:last-child { border-bottom: none; }
-.emr-item:hover { background: #f9fafb; }
-.emr-icon-box {
-    width: 42px; height: 42px; border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; font-size: 1rem;
+.qp-label {
+    font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; color: #9ca3af; margin-right: 0.15rem;
 }
-.emr-meta { flex: 1; min-width: 0; }
-.emr-meta a.emr-title {
-    font-weight: 600; color: #111827; text-decoration: none; display: block;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.qp-btn {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.35rem 0.8rem; font-size: 0.75rem; font-weight: 600;
+    color: #374151; background: #ffffff; border: 1px solid #d1d5db;
+    border-radius: 0.5rem; text-decoration: none; transition: all .15s ease;
+    white-space: nowrap;
 }
-.emr-meta a.emr-title:hover { color: #059669; text-decoration: underline; }
-.emr-meta .emr-date { font-size: 0.72rem; color: #6b7280; display: block; margin: 2px 0 4px; }
-.emr-tag {
-    display: inline-block; font-size: 0.65rem; padding: 0.1rem 0.45rem;
-    border-radius: 9999px; margin-right: 0.25rem; margin-top: 0.15rem; font-weight: 600;
+.qp-btn i { color: #10b981; font-size: 0.7rem; }
+.qp-btn:hover { border-color: #10b981; color: #047857; background: #ecfdf5; }
+
+/* ---- Baris atas: jumlah dokumen + pencarian ---- */
+.emr-top { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+.emr-badge-count {
+    background: #10b981; color: #fff; font-size: 0.68rem; padding: 0.25rem 0.6rem;
+    border-radius: 9999px; font-weight: 700; flex-shrink: 0;
 }
-.emr-tag-ruangan { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
-.emr-tag-author  { background: #f3f4f6; color: #374151; }
-.emr-actions { display: flex; flex-direction: column; gap: 0.25rem; flex-shrink: 0; }
-.emr-actions a, .emr-actions span {
-    font-size: 0.7rem; padding: 0.2rem 0.55rem; border-radius: 0.35rem; font-weight: 600;
-    text-decoration: none; border: none; cursor: pointer;
-    display: inline-flex; align-items: center; gap: 0.25rem; white-space: nowrap;
-}
-.emr-btn-lihat { background: #dbeafe; color: #1e40af; }
-.emr-btn-lihat:hover { background: #bfdbfe; }
-.emr-btn-cetak { background: #fef3c7; color: #92400e; }
-.emr-btn-cetak:hover { background: #fde68a; }
-.emr-btn-off { background: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
 .emr-search {
     width: 100%; border: 1px solid #d1d5db; border-radius: 9999px;
     padding: 0.4rem 0.9rem; font-size: 0.8rem; outline: none;
 }
 .emr-search:focus { border-color: #10b981; box-shadow: 0 0 0 2px rgba(16,185,129,.2); }
-.emr-section-title {
-    font-size: 0.95rem; font-weight: 700; color: #111827; margin-bottom: 0.5rem;
-    display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;
+
+/* ---- Daftar EMR (baris minimal) ---- */
+.emr-card-wrap { max-height: 65vh; overflow-y: auto; border: 1px solid #f3f4f6; border-radius: 0.5rem; background: #fff; }
+.emr-item {
+    display: flex; align-items: center; gap: 0.7rem;
+    padding: 0.5rem 0.75rem; border-bottom: 1px solid #f3f4f6;
 }
-.emr-badge-count {
-    background: #10b981; color: #fff; font-size: 0.65rem; padding: 0.1rem 0.45rem;
-    border-radius: 9999px; font-weight: 700;
+.emr-item:last-child { border-bottom: none; }
+.emr-item:hover { background: #f9fafb; }
+.emr-item-icon { color: #9ca3af; font-size: 0.9rem; width: 1.1rem; text-align: center; flex-shrink: 0; }
+.emr-meta { flex: 1; min-width: 0; }
+.emr-meta a.emr-title {
+    font-weight: 600; color: #111827; text-decoration: none; display: block;
+    font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.emr-src { font-size: 0.65rem; font-weight: 400; color: #6b7280; }
-.emr-warn {
-    background: #fffbeb; border: 1px solid #fcd34d; color: #92400e;
-    border-radius: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.72rem; margin-bottom: 0.75rem;
+.emr-meta a.emr-title:hover { color: #059669; }
+.emr-meta .emr-date {
+    font-size: 0.7rem; color: #9ca3af; display: block; margin-top: 1px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.emr-warn code { background: #fef3c7; padding: 0 0.25rem; border-radius: 0.25rem; }
+.emr-actions { display: flex; gap: 0.3rem; flex-shrink: 0; }
+.emr-icbtn, .emr-icbtn-off {
+    width: 28px; height: 28px; display: inline-flex; align-items: center;
+    justify-content: center; border-radius: 0.4rem; font-size: 0.72rem;
+    text-decoration: none;
+}
+.emr-icbtn { color: #6b7280; border: 1px solid #e5e7eb; background: #fff; }
+.emr-icbtn:hover { color: #047857; border-color: #10b981; background: #ecfdf5; }
+.emr-icbtn-off { color: #d1d5db; border: 1px solid #f3f4f6; background: #fafafa; cursor: not-allowed; }
+
 .emr-debug {
     background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 0.5rem;
     padding: 0.5rem 0.75rem; font-size: 0.65rem; color: #334155; margin-top: 0.75rem;
@@ -1330,35 +1343,28 @@ if ($emr_surat_fk !== '' && !isset($latestByCollection['suratpermintaandirawat']
 }
 </style>
 
-<div class="emr-wrap space-y-3">
-    <!-- Header card EMR (setara updates-header "EMR" pada t-emr-detail.vue) -->
-    <div>
-        <div class="emr-section-title">
-          
-            <span class="emr-badge-count"><?php echo count($listEmr); ?></span>
-           
-        </div>
-        <?php if (count($listEmr) > 0): ?>
+<div class="emr-wrap">
+    <!-- Cetak Cepat — posisi di paling atas modal, hanya tombol singkat -->
+    <?php if ($quickHtml !== ''): ?>
+    <div class="qp-wrap">
+        <span class="qp-label">Cetak Cepat</span>
+        <?php echo $quickHtml; ?>
+    </div>
+    <?php endif; ?>
+
+    <!-- Jumlah dokumen + pencarian -->
+    <?php if (count($listEmr) > 0): ?>
+    <div class="emr-top">
+        <span class="emr-badge-count" title="Jumlah dokumen EMR"><?php echo count($listEmr); ?></span>
         <input
             type="text"
             id="emrSearchInput"
             class="emr-search"
-            placeholder="Cari EMR (SPRI, CPPT, Resume Medis, MEOWS, ...)"
+            placeholder="Cari EMR..."
             value="<?php echo htmlspecialchars($qSearch); ?>"
             autocomplete="off"
         >
-        <?php endif; ?>
     </div>
-
-    <?php if ($limited): ?>
-    <!-- <div class="emr-warn">
-        <b><i class="fas fa-exclamation-triangle"></i> Mode terbatas.</b>
-        Daftar EMR dibaca dari database SIMRS (emrpasien_t) karena sumber utama
-        (MongoDB <code>#ResumeEMR</code> / API <code>/emr/detail-pelayanan</code>)
-        tidak dapat diakses<?php echo $sourceError !== '' ? ': <code>' . htmlspecialchars($sourceError) . '</code>' : ''; ?>.
-        Nama form mengikuti referensi <code>emr_t</code> &amp; log EMR; dokumen yang tidak
-        ada log-nya tidak bisa dipastikan namanya.
-    </div> -->
     <?php endif; ?>
 
     <!-- Daftar card EMR -->
@@ -1376,8 +1382,6 @@ if ($emr_surat_fk !== '' && !isset($latestByCollection['suratpermintaandirawat']
     <?php else: ?>
         <div class="emr-card-wrap border rounded-lg bg-white" id="emrListContainer">
             <?php foreach ($listEmr as $idx => $item):
-                $colorKey  = $listColor[$idx % count($listColor)];
-                $hex       = $colorHex[$colorKey];
                 $emrFk     = $item['emrpasienfk'];
                 $noregItem = $item['noregistrasi'] !== '' ? $item['noregistrasi'] : $noregistrasi;
                 $editUrl   = emrBuildEditUrl(
@@ -1394,76 +1398,37 @@ if ($emr_surat_fk !== '' && !isset($latestByCollection['suratpermintaandirawat']
                 $searchHay = strtolower($item['namaemr'] . ' ' . $item['author'] . ' ' . $item['ruangan'] . ' ' . $item['table'] . ' ' . $item['noemr']);
             ?>
             <div class="emr-item" data-search="<?php echo htmlspecialchars($searchHay); ?>">
-                <div class="emr-icon-box" style="background:<?php echo $hex['bg']; ?>;color:<?php echo $hex['fg']; ?>">
-                    <i class="<?php echo htmlspecialchars($item['icon']); ?>"></i>
-                </div>
+                <i class="<?php echo htmlspecialchars($item['icon']); ?> emr-item-icon"></i>
                 <div class="emr-meta">
                     <a class="emr-title" href="<?php echo htmlspecialchars($editUrl); ?>" target="_blank" title="Lihat / ubah EMR">
                         <?php echo htmlspecialchars($item['namaemr']); ?>
                     </a>
                     <span class="emr-date">
-                        <i class="far fa-clock mr-1"></i><?php echo emrTanggalIndoSimple($item['last_update']); ?>
-                        <?php if ($item['noemr'] !== ''): ?>
-                            · <span class="text-gray-400"><?php echo htmlspecialchars($item['noemr']); ?></span>
-                        <?php endif; ?>
+                        <?php echo emrTanggalIndoSimple($item['last_update']); ?>
+                        <?php if ($item['noemr'] !== ''): ?> · <?php echo htmlspecialchars($item['noemr']); ?><?php endif; ?>
+                        <?php if ($item['ruangan'] !== ''): ?> · <?php echo htmlspecialchars($item['ruangan']); ?><?php endif; ?>
+                        <?php if ($item['author'] !== '' && $item['author'] !== '-'): ?> · <?php echo htmlspecialchars($item['author']); ?><?php endif; ?>
                     </span>
-                    <?php if ($item['ruangan'] !== ''): ?>
-                        <span class="emr-tag emr-tag-ruangan"><?php echo htmlspecialchars($item['ruangan']); ?></span>
-                    <?php endif; ?>
-                    <span class="emr-tag emr-tag-author"><?php echo htmlspecialchars($item['author'] !== '' ? $item['author'] : '-'); ?></span>
-                    <?php if ($item['table'] !== ''): ?>
-                        <span class="emr-tag" style="background:#f1f5f9;color:#475569;"><?php echo htmlspecialchars($item['table']); ?></span>
-                    <?php endif; ?>
                 </div>
                 <div class="emr-actions">
-                    <a class="emr-btn-lihat" href="<?php echo htmlspecialchars($editUrl); ?>" target="_blank" title="Lihat atau ubah data EMR">
-                        <i class="fas fa-eye"></i> Lihat
+                    <a class="emr-icbtn" href="<?php echo htmlspecialchars($editUrl); ?>" target="_blank" title="Lihat / ubah">
+                        <i class="fas fa-eye"></i>
                     </a>
                     <?php if ($cetakUrl !== ''): $cetakUrl = str_replace(
     'http://localhost',
     'http://192.168.22.81',
     $cetakUrl
 ); ?>
-                    <a class="emr-btn-cetak" href="<?php echo htmlspecialchars($cetakUrl); ?>" target="_blank" title="Cetak data EMR">
-                        <i class="fas fa-print"></i> Cetak
+                    <a class="emr-icbtn" href="<?php echo htmlspecialchars($cetakUrl); ?>" target="_blank" title="Cetak">
+                        <i class="fas fa-print"></i>
                     </a>
                     <?php else: ?>
-                    <span class="emr-btn-off" title="Collection cetak belum diketahui"><i class="fas fa-ban"></i> Cetak</span>
+                    <span class="emr-icbtn-off" title="Collection cetak belum diketahui"><i class="fas fa-ban"></i></span>
                     <?php endif; ?>
                 </div>
             </div>
             <?php endforeach; ?>
         </div>
-    <?php endif; ?>
-
-    <!-- Tombol cetak cepat (form umum) -->
-    <?php
-    $quickHtml = '';
-    foreach ($quickPrintMap as $key => $meta) {
-        if (!isset($latestByCollection[$key])) {
-            continue;
-        }
-        $it   = $latestByCollection[$key];
-        $fk   = $it['emrpasienfk'];
-        $nore = !empty($it['noregistrasi']) ? $it['noregistrasi'] : $noregistrasi;
-        if ($fk === '' || $nore === '') {
-            continue;
-        }
-        $url = emrBuildCetakUrl($apiBase, $meta['collection'], $fk, $nore, $userCetak, $kdProfile, $tokenCetak);
-        $quickHtml .= '<a href="' . htmlspecialchars($url) . '" target="_blank" '
-            . 'class="inline-flex items-center gap-1 px-3 py-1.5 text-white rounded-lg text-xs font-semibold transition '
-            . $meta['color'] . '">'
-            . '<i class="' . $meta['icon'] . '"></i> ' . htmlspecialchars($meta['label'])
-            . ' <span class="opacity-75">(' . htmlspecialchars($it['namaemr']) . ')</span></a>';
-    }
-    if ($quickHtml !== ''):
-    ?>
-    <div class="pt-2 border-t">
-        <div class="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Cetak Cepat</div>
-        <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
-            <?php echo $quickHtml; ?>
-        </div>
-    </div>
     <?php endif; ?>
 
     <?php if ($showDebug): ?>
@@ -1473,6 +1438,7 @@ if ($emr_surat_fk !== '' && !isset($latestByCollection['suratpermintaandirawat']
         echo "\n" . 'norec_pd     : ' . htmlspecialchars($norec_pd);
         echo "\n" . 'noregistrasi : ' . htmlspecialchars($noregistrasi);
         echo "\n" . 'hasil        : ' . htmlspecialchars($source) . ' (' . count($listEmr) . ' item)';
+        echo "\n" . 'sumber       : ' . htmlspecialchars($sourceLabel);
         echo "\n" . 'catatan      : ' . htmlspecialchars($sourceError);
         foreach ($diag as $d) {
             echo "\n" . str_pad('[' . $d[0] . ']', 12) . ' ' . htmlspecialchars($d[1]);
@@ -1480,13 +1446,6 @@ if ($emr_surat_fk !== '' && !isset($latestByCollection['suratpermintaandirawat']
         ?>
     </div>
     <?php endif; ?>
-
-    <p class="text-[10px] text-gray-400 text-right">
-        sumber data: <?php echo htmlspecialchars($sourceLabel); ?>
-        <?php if ($sourceError !== ''): ?>
-            <br><span class="text-amber-600"><?php echo htmlspecialchars($sourceError); ?></span>
-        <?php endif; ?>
-    </p>
 </div>
 
 <script>

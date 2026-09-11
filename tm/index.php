@@ -777,27 +777,30 @@ $resetUrl = '?' . $resetQuery;
     </div>
     <!-- Modal EMR (AJAX) — card LIST_EMR native PHP (port dari frontend Vue t-emr-detail) -->
     <div id="emrModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden print-hide">
-        <div class="relative top-6 mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-lg bg-white mb-10">
-            <div class="flex justify-between items-center border-b pb-2 mb-3">
-                <h3 class="text-lg font-semibold text-gray-800">
+        <div class="relative top-4 mx-auto p-4 border w-full max-w-5xl shadow-lg rounded-lg bg-white mb-8">
+            <div class="flex justify-between items-center border-b pb-2 mb-3 gap-3">
+                <h3 class="text-base font-semibold text-gray-800 truncate">
                     <i class="fas fa-notes-medical text-emerald-600 mr-1"></i>
                     EMR — <span id="emrNoreg"></span>
                 </h3>
-                <button id="closeEmrModal" class="text-gray-500 hover:text-gray-700" type="button" aria-label="Tutup">
-                    <i class="fas fa-times"></i>
-                </button>
+                <div class="flex items-center gap-1.5 flex-shrink-0">
+                    <button id="reloadEmrModal"
+                            class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition"
+                            type="button" title="Muat ulang daftar EMR" aria-label="Muat ulang daftar EMR">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button id="closeEmrModal"
+                            class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
+                            type="button" aria-label="Tutup">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
             </div>
             <div id="emrContent" class="text-sm">
                 <div class="flex justify-center items-center py-8">
                     <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
                     <span class="ml-2 text-gray-500">Memuat data...</span>
                 </div>
-            </div>
-            <div class="flex justify-between items-center border-t pt-2 mt-3 gap-2">
-              
-                <button id="reloadEmrModal" class="btn-emr" type="button" title="Muat ulang daftar EMR">
-                    <i class="fas fa-sync-alt"></i> Muat ulang
-                </button>
             </div>
         </div>
     </div>
