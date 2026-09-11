@@ -72,6 +72,7 @@ const ROUTES = [
     label: 'API Backend — /api (biller, eksternal)',
     prefix: `${PREFIX}/api/`,
     target: `http://${HOST}:${PORTS.backend}/api/`,
+    port: PORTS.backend,
     strip: true,
     start: 'cd backend && ./serve.sh          # /api dilayani server yang sama',
   },
@@ -199,7 +200,7 @@ function serviceDownPage(route, pathname) {
   <span class="tag">503 · SERVICE BELUM AKTIF</span>
   <h1>${route.label}</h1>
   <p>Permintaan <code>${pathname}</code> diteruskan ke
-     <code>http://${HOST}:${PORTS[route.id] || PORTS.backend}</code>, tetapi tidak ada proses yang mendengarkan di port tersebut.</p>
+     <code>http://${HOST}:${route.port || PORTS[route.id] || PORTS.backend}</code>, tetapi tidak ada proses yang mendengarkan di port tersebut.</p>
   <p>Jalankan service berikut pada terminal terpisah:</p>
   <pre>${command}</pre>
   <p>Setelah service aktif, muat ulang halaman ini. Halaman status semua service:
@@ -381,7 +382,7 @@ async function statusMap() {
   const map = {}
   await Promise.all(
     ROUTES.map(async (route) => {
-      const port = PORTS[route.id] || PORTS.frontend
+      const port = route.port || PORTS[route.id] || PORTS.frontend
       map[route.id] = await isPortOpen(port)
     })
   )
@@ -422,7 +423,7 @@ const server = http.createServer(async (req, res) => {
         id: route.id,
         url: route.prefix,
         label: route.label,
-        port: PORTS[route.id] || PORTS.frontend,
+        port: route.port || PORTS[route.id] || PORTS.frontend,
         up: map[route.id],
         start: route.start,
       })),
