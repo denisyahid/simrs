@@ -761,14 +761,15 @@ $resetUrl = '?' . $resetQuery;
             </div>
         </div>
     </div>
-    <!-- Modal EMR (AJAX) -->
+    <!-- Modal EMR (AJAX) — card LIST_EMR native PHP (port dari frontend Vue t-emr-detail) -->
     <div id="emrModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden print-hide">
-        <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
+        <div class="relative top-6 mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-lg bg-white mb-10">
             <div class="flex justify-between items-center border-b pb-2 mb-3">
                 <h3 class="text-lg font-semibold text-gray-800">
-                    Detail EMR - <span id="emrNoreg"></span>
+                    <i class="fas fa-notes-medical text-emerald-600 mr-1"></i>
+                    EMR — <span id="emrNoreg"></span>
                 </h3>
-                <button id="closeEmrModal" class="text-gray-500 hover:text-gray-700">
+                <button id="closeEmrModal" class="text-gray-500 hover:text-gray-700" type="button" aria-label="Tutup">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -1075,30 +1076,23 @@ $resetUrl = '?' . $resetQuery;
                                     <i class="fas fa-file-invoice-dollar"></i> Billing
                                 </a>
                             </td>
-                            <td class="border flex justify-content-between text-xs px-1 py-0.5 print-hide text-center">
-                                    <button class="btn-emr btn-emr-modal"
-        data-norec_pd="<?= urlencode($norec_pd) ?>"
-        data-noregistrasi="<?= urlencode($row['noregistrasi']) ?>"
-        data-nocmfk="<?= urlencode($row['nocmfk']) ?>"
-        data-norec_apd="<?= urlencode($row['norec_apd']) ?>"
-        data-emr_surat_fk="<?= urlencode($row['emrpasienfk_surat'] ?? '') ?>"
-        data-nama="<?= htmlspecialchars($row['namapasien']) ?>">
-    <i class="fas fa-stethoscope"></i> EMR 
-</button>
-
- 
-                                <!-- EMR -->
-                                <a href="<?= $linkEmr ?>" target="_blank" class="btn-emr">
+                            <td class="border flex justify-content-between text-xs px-1 py-0.5 print-hide text-center gap-1">
+                                <!-- Tombol EMR → modal card LIST_EMR (ajax_emr_detail.php native) -->
+                                <button type="button"
+                                        class="btn-emr btn-emr-modal"
+                                        data-norec_pd="<?= htmlspecialchars($norec_pd) ?>"
+                                        data-noregistrasi="<?= htmlspecialchars($row['noregistrasi']) ?>"
+                                        data-nocmfk="<?= htmlspecialchars($row['nocmfk']) ?>"
+                                        data-norec_apd="<?= htmlspecialchars($row['norec_apd']) ?>"
+                                        data-emr_surat_fk="<?= htmlspecialchars($row['emrpasienfk_surat'] ?? '') ?>"
+                                        data-nama="<?= htmlspecialchars($row['namapasien']) ?>"
+                                        title="Lihat daftar EMR pasien">
+                                    <i class="fas fa-stethoscope"></i> EMR
+                                </button>
+                                <!-- Buka form TM (Surat Permintaan Dirawat) di frontend Vue -->
+                                <a href="<?= $linkEmr ?>" target="_blank" class="btn-emr" title="Buka form Surat Permintaan Dirawat">
                                     <i class="fas fa-user"></i> TM
                                 </a>
-                                <!-- Billing -->
-                               
-                              <!-- Rujukan Manual (diverifikasi lewat AJAX) -->
-
-
-
-                               
-                                
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -1254,7 +1248,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     });
 
-    // === EMR Modal ===
+    // === EMR Modal (card LIST_EMR native PHP — ajax_emr_detail.php) ===
     const emrModal = document.getElementById('emrModal');
     const emrContent = document.getElementById('emrContent');
     const emrNoreg = document.getElementById('emrNoreg');
@@ -1268,9 +1262,14 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>`;
     }
 
-    closeEmrBtn.addEventListener('click', closeEmrModal);
+    if (closeEmrBtn) closeEmrBtn.addEventListener('click', closeEmrModal);
     window.addEventListener('click', function(e) {
         if (e.target === emrModal) closeEmrModal();
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && emrModal && !emrModal.classList.contains('hidden')) {
+            closeEmrModal();
+        }
     });
 
     document.body.addEventListener('click', function(e) {
@@ -1278,32 +1277,48 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!btn) return;
 
         e.preventDefault();
-        const norecPd = btn.dataset.norec_pd;
-        const noregistrasi = btn.dataset.noregistrasi;
-        const nocmfk = btn.dataset.nocmfk;
-        const norecApd = btn.dataset.norec_apd;
-        const emrSuratFk = btn.dataset.emr_surat_fk;
+        e.stopPropagation();
+
+        // data-* dibaca lewat dataset (nilai sudah di-decode HTML entity)
+        const norecPd = btn.dataset.norec_pd || '';
+        const noregistrasi = btn.dataset.noregistrasi || '';
+        const nocmfk = btn.dataset.nocmfk || '';
+        const norecApd = btn.dataset.norec_apd || '';
+        const emrSuratFk = btn.dataset.emr_surat_fk || '';
         const nama = btn.dataset.nama || noregistrasi;
 
         emrModal.classList.remove('hidden');
-        emrNoreg.textContent = noregistrasi;
+        emrNoreg.textContent = nama ? (noregistrasi + ' · ' + nama) : noregistrasi;
         emrContent.innerHTML = `<div class="flex justify-center items-center py-8">
             <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
-            <span class="ml-2 text-gray-500">Memuat data...</span>
+            <span class="ml-2 text-gray-500">Memuat data EMR...</span>
         </div>`;
 
-        let url = `ajax_emr_detail.php?norec_pd=${encodeURIComponent(norecPd)}&noregistrasi=${encodeURIComponent(noregistrasi)}&nocmfk=${encodeURIComponent(nocmfk)}&norec_apd=${encodeURIComponent(norecApd)}`;
-        if (emrSuratFk) {
-            url += `&emr_surat_fk=${encodeURIComponent(emrSuratFk)}`;
-        }
+        const params = new URLSearchParams();
+        params.set('norec_pd', norecPd);
+        params.set('noregistrasi', noregistrasi);
+        params.set('nocmfk', nocmfk);
+        params.set('norec_apd', norecApd);
+        if (emrSuratFk) params.set('emr_surat_fk', emrSuratFk);
 
-        fetch(url)
+        fetch('ajax_emr_detail.php?' + params.toString())
             .then(response => {
-                if (!response.ok) throw new Error('Gagal memuat');
+                if (!response.ok) throw new Error('HTTP ' + response.status);
                 return response.text();
             })
             .then(html => {
                 emrContent.innerHTML = html;
+                // Jalankan ulang <script> inline dari response AJAX
+                emrContent.querySelectorAll('script').forEach(function (oldScript) {
+                    const s = document.createElement('script');
+                    if (oldScript.src) {
+                        s.src = oldScript.src;
+                    } else {
+                        s.textContent = oldScript.textContent;
+                    }
+                    document.body.appendChild(s);
+                    oldScript.remove();
+                });
             })
             .catch(error => {
                 emrContent.innerHTML = `<p class="text-red-500 text-center py-4">Gagal memuat data EMR: ${error.message}</p>`;
