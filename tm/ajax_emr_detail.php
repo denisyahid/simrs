@@ -1,230 +1,683 @@
 <?php
 /**
- * ajax_emr_detail.php
- * Native PHP port dari tab/card EMR di frontend-v2 (t-emr-detail.vue LIST_EMR)
- * + backend ProfilePasienCtrl::detailPelayanan (response.emr dari #ResumeEMR / emrpasien_t)
+ * ============================================================================
+ *  ajax_emr_detail.php  —  Native PHP (dipakai oleh tm/index.php)
+ * ============================================================================
+ *  Menampilkan card / tab EMR (daftar dokumen EMR pasien) seperti tab "EMR"
+ *  pada halaman frontend Vue:  module/emr/profile-pasien  (t-emr-detail.vue
+ *  bagian LIST_EMR).
  *
- * Dipanggil dari tm/index.php saat tombol EMR diklik (modal AJAX).
+ *  HASIL ANALISA BACKEND (Laravel) + FRONTEND (Vue):
+ *
+ *  1) Saat form EMR disimpan  -> EMRCtrl (saveEMR / saveEMRCPPT / ...)
+ *     - emrpasien_t  : 1 baris / 1x simpan (jenisemr = 'asesmen_medis' utk
+ *                      hampir semua form, jadi TIDAK bisa dipakai utk tahu
+ *                      nama form / collection!).
+ *     - MongoDB #ResumeEMR: history yg dipakai frontend, berisi
+ *         { noregistrasifk, kdprofile, emrpasienfk, table (collection),
+ *           last_update, author, url_form, namaemr, noemr, ruangan, icon }
+ *       ==> NAMA DOKUMEN (SPRI / CPPT / MEOWS / Resume Medis / dst) ADA DI SINI
+ *           (namaemr  diambil dari "name_form" form masing-masing).
+ *     - logginguser_t: log EMR -> jenislog = collection, noreff = emrpasien_t.norec,
+ *           referensi = 'EMR', keterangan = 'input EMR <NAMA FORM> dari pasien ...'
+ *
+ *  2) Halaman EMR Vue memanggil  GET /service/emr/detail-pelayanan
+ *     (ProfilePasienCtrl::detailPelayanan) dan hasilnya dibaca di
+ *     frontend sebagai:  riwayatPemeriksaan.LIST_EMR = response.emr
+ *     ==> envelope Laravel selalu { metaData:{...}, response:{ emr:[...] } }
+ *         (sebelumnya kode di sini membaca $json['emr'] / $json['data']['emr']
+ *          sehingga SELALU gagal dan jatuh ke query Postgres yang salah).
+ *
+ *  Urutan sumber data pada file ini (otomatis):
+ *     1. MongoDB  : collection "#ResumeEMR"       (identik dgn backend/frontend)
+ *     2. REST API : /service/emr/detail-pelayanan (Laravel)  -> response.emr
+ *     3. PostgreSQL : emrpasien_t + emr_t + logginguser_t  (mode terbatas)
+ *
+ *  Yang dikerjakan pada revisi ini (menjawab "nama dokumen tidak muncul"):
+ *     - Envelope API Laravel dibaca benar: response.emr (bukan $json['emr']).
+ *     - Nama dokumen diambil dari sumber yang sama dengan frontend
+ *       (#ResumeEMR.namaemr), bukan hasil join string emr_t.collection =
+ *       emrpasien_t.jenisemr (jenisemr hampir selalu 'asesmen_medis' sehingga
+ *       semua kartu tampil sebagai "Asesmen Medis").
+ *     - VitalSign tetap ditampilkan (1 terbaru) persis seperti response.emr.
+ *     - Bila namaemr / url_form / icon tidak ada, dilengkapi dari master emr_t
+ *       (collection -> caption / url_form / icon).
+ *     - Postgres (mode terbatas) memakai logginguser_t (jenislog = collection,
+ *       keterangan = "input EMR <NAMA FORM> ...") + emr_t, bukan jenisemr.
+ *     - Kartu ganda (emrpasienfk + collection sama) dihilangkan.
+ *
+ *  Parameter GET : norec_pd, noregistrasi, nocmfk, norec_apd, emr_surat_fk,
+ *                  q (cari), token (opsional, agar token selalu baru), debug=1
+ *
+ *  CARA PAKAI / CEK CEPAT:
+ *     - Dari tm/index.php: klik tombol "EMR" pada baris pasien.
+ *     - Cek langsung   : ajax_emr_detail.php?norec_pd=<uuid>&noregistrasi=<no>&debug=1
+ *       (panel "Diagnosa sumber data EMR" menampilkan sumber yang dipakai,
+ *        status koneksi MongoDB, token yang dicoba, dan error bila ada).
+ *     - Token kedaluwarsa: buka tm/index.php?...&token=<token dari Vue>
+ *       (token disimpan di session dan dipakai untuk daftar EMR + link cetak).
+ * ============================================================================
  */
+
+error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING & ~E_DEPRECATED);
+ini_set('display_errors', '0');
+header('Content-Type: text/html; charset=utf-8');
+
+// ============================================================
+// KONFIGURASI
+// ============================================================
+// --- Database SIMRS (PostgreSQL) ---
 $host     = "192.168.22.81";
 $port     = "5792";
 $dbname   = "rsud_malangbong";
 $user     = "postgres";
 $password = "Tr4nsm3d!c MaRe#T3aM";
 
+$kdProfile = 1;
+
+// Alamat frontend Vue (untuk membuka / mengubah form EMR)
+$webBase = 'https://192.168.22.81';
+
+// Alamat REST API Laravel (sumber data EMR)
+$apiBase = 'https://192.168.22.81/service';
+
+// User yang dicetak pada footer cetak EMR
+$userCetak = 'Pasa Pirdaos, A.Md.A.K';
+
+// Token default (dipakai bila token pada URL / session tidak ada).
+// Bila token di URL tm/index.php?token=... diisi, token itulah yang dipakai.
+$tokenDefault = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJwYXNhIiwic2Vzc2lvbklkIjoiN2FlODRkMWQtODE0Ny00Yzg2LTk3YmYtMjczZDQ4ZjhlNjZlIiwiZXhwIjoxNzgyMjc0NTk1fQ.s1y3_kHquIMFXLUrySNuyXWQarceI6VhAqUveszO9uhpnGoT_peADF4hdNAiZxhN7uycLVvuicgk_6XgkY3WOQ.MQ==';
+
+// --- MongoDB (sumber utama daftar EMR) ---
+// Kosongkan = otomatis: dibaca dari backend/.env, lalu dicoba host lokal.
+$mongoUriManual = '';          // contoh: 'mongodb://user:pass@127.0.0.1:27017/?authSource=admin'
+$mongoDbManual  = '';          // contoh: 'transmedic_v3'
+$mongoCollection = '#ResumeEMR';
+
+// --- JWT Laravel (untuk membuat token sendiri bila token default tidak valid) ---
+// Nilai default di backend/config/app.php : env('JWT_KEY', 'TRANSINDO')
+$jwtKeyManual = '';
+
+// Tampilkan panel diagnosa (cara pakai: ajax_emr_detail.php?...&debug=1)
+$showDebug = isset($_GET['debug']) && $_GET['debug'] == '1';
+
+$diag = array();
+$diag[] = array('config', 'kdProfile=' . $kdProfile . ', webBase=' . $webBase . ', apiBase=' . $apiBase);
+
+// ============================================================
+// SESSION (menyimpan token yang dipakai / dikirim dari URL)
+// ============================================================
+// Token bisa "disuntik" dari URL:  tm/index.php?...&token=<token baru>
+// sehingga tidak perlu mengedit file bila token SIMRS kadaluarsa.
+if (isset($_COOKIE[session_name()]) || !empty($_GET['token'])) {
+    @session_start();
+}
+if (session_status() === PHP_SESSION_ACTIVE && !empty($_GET['token'])) {
+    $_SESSION['emr_token'] = trim($_GET['token']);
+}
+$tokenFromUrl = (session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION['emr_token']))
+    ? trim($_SESSION['emr_token']) : '';
+
+// ============================================================
+// KONEKSI POSTGRES
+// ============================================================
+$pdo = null;
 try {
-    $pdo = new PDO("pgsql:host=$host;port=$port;dbname=$dbname", $user, $password, [
+    $pdo = new PDO("pgsql:host=$host;port=$port;dbname=$dbname", $user, $password, array(
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    ]);
+    ));
 } catch (PDOException $e) {
-    http_response_code(500);
-    echo '<p class="text-red-500">Gagal koneksi database</p>';
-    exit;
+    // Postgres dipakai untuk fallback & info pasien; kalau gagal, masih bisa
+    // jalan lewat MongoDB / API.
+    $diag[] = array('postgres', 'GAGAL: ' . $e->getMessage());
 }
 
-$norec_pd     = trim($_GET['norec_pd'] ?? '');
-$noregistrasi = trim($_GET['noregistrasi'] ?? '');
-$nocmfk       = trim($_GET['nocmfk'] ?? '');
-$norec_apd    = trim($_GET['norec_apd'] ?? '');
-$emr_surat_fk = trim($_GET['emr_surat_fk'] ?? '');
-$qSearch      = trim($_GET['q'] ?? '');
+// ============================================================
+// PARAMETER
+// ============================================================
+$norec_pd     = trim(isset($_GET['norec_pd']) ? $_GET['norec_pd'] : '');
+$noregistrasi = trim(isset($_GET['noregistrasi']) ? $_GET['noregistrasi'] : '');
+$nocmfk       = trim(isset($_GET['nocmfk']) ? $_GET['nocmfk'] : '');
+$norec_apd    = trim(isset($_GET['norec_apd']) ? $_GET['norec_apd'] : '');
+$emr_surat_fk = trim(isset($_GET['emr_surat_fk']) ? $_GET['emr_surat_fk'] : '');
+$qSearch      = trim(isset($_GET['q']) ? $_GET['q'] : '');
+
+// Bila norec_pd belum ada, cari dari noregistrasi
+if ($norec_pd === '' && $noregistrasi !== '' && $pdo) {
+    try {
+        $stmt = $pdo->prepare("SELECT norec FROM pasiendaftar_t WHERE noregistrasi = :noreg AND statusenabled = true LIMIT 1");
+        $stmt->execute(array(':noreg' => $noregistrasi));
+        $found = $stmt->fetch();
+        if ($found) {
+            $norec_pd = $found['norec'];
+        }
+    } catch (Exception $e) {
+        $diag[] = array('postgres', 'lookup norec_pd: ' . $e->getMessage());
+    }
+}
 
 if ($norec_pd === '') {
     http_response_code(400);
-    echo '<p class="text-red-500">Parameter norec_pd diperlukan</p>';
+    echo '<p class="text-red-500 p-3">Parameter <b>norec_pd</b> / <b>noregistrasi</b> diperlukan.</p>';
     exit;
 }
 
-$token     = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJwYXNhIiwic2Vzc2lvbklkIjoiN2FlODRkMWQtODE0Ny00Yzg2LTk3YmYtMjczZDQ4ZjhlNjZlIiwiZXhwIjoxNzgyMjc0NTk1fQ.s1y3_kHquIMFXLUrySNuyXWQarceI6VhAqUveszO9uhpnGoT_peADF4hdNAiZxhN7uycLVvuicgk_6XgkY3WOQ.MQ==';
-$userCetak = 'Pasa Pirdaos, A.Md.A.K';
-$kdProfile = 1;
-$baseUrl   = 'https://192.168.22.81';
-
-// Warna ikon box (mirip listColor di Vue)
-$listColor = ['info', 'success', 'warning', 'danger', 'purple', 'orange', 'primary', 'blue', 'green', 'indigo'];
-$colorHex  = [
-    'info'    => ['bg' => '#dbeafe', 'fg' => '#1d4ed8'],
-    'success' => ['bg' => '#d1fae5', 'fg' => '#047857'],
-    'warning' => ['bg' => '#fef3c7', 'fg' => '#b45309'],
-    'danger'  => ['bg' => '#fee2e2', 'fg' => '#b91c1c'],
-    'purple'  => ['bg' => '#ede9fe', 'fg' => '#6d28d9'],
-    'orange'  => ['bg' => '#ffedd5', 'fg' => '#c2410c'],
-    'primary' => ['bg' => '#e0e7ff', 'fg' => '#4338ca'],
-    'blue'    => ['bg' => '#dbeafe', 'fg' => '#2563eb'],
-    'green'   => ['bg' => '#dcfce7', 'fg' => '#15803d'],
-    'indigo'  => ['bg' => '#e0e7ff', 'fg' => '#4338ca'],
-];
-
-// Label & warna tombol cetak cepat (dari draft aja_emr_detail_dulu.php)
-$quickPrintMap = [
-    'RujukanPasien'         => ['label' => 'Cetak Rujukan Manual', 'color' => 'bg-red-600 hover:bg-red-700', 'icon' => 'fas fa-print'],
-    'SuratPermintaanDirawat'=> ['label' => 'Cetak SPRI',           'color' => 'bg-green-600 hover:bg-green-700', 'icon' => 'fas fa-file-medical-alt'],
-    'resumeMedis'           => ['label' => 'Cetak Resume Medis',   'color' => 'bg-emerald-600 hover:bg-emerald-700', 'icon' => 'fas fa-notes-medical'],
-    'ResumeMedis'           => ['label' => 'Cetak Resume Medis',   'color' => 'bg-emerald-600 hover:bg-emerald-700', 'icon' => 'fas fa-notes-medical'],
-    'CPPT'                  => ['label' => 'Cetak CPPT',           'color' => 'bg-blue-600 hover:bg-blue-700', 'icon' => 'fas fa-clipboard-list'],
-    'RingkasanPulang'       => ['label' => 'Cetak Ringkasan Pulang','color' => 'bg-indigo-600 hover:bg-indigo-700', 'icon' => 'fas fa-file-alt'],
-];
+// ============================================================
+// UTILITAS
+// ============================================================
 
 /**
- * Format tanggal Indonesia sederhana (DD-MM-YYYY HH:ii)
+ * Tanggal gaya frontend: "Jum, 11 Sep 26 10:01" (H.formatDateIndoSimple).
+ *
+ * Catatan penting: backend menulis last_update dengan date('Y-m-d H:i:s')
+ * memakai timezone aplikasi (config/app.php -> Asia/Jakarta). Nilai itu
+ * diperlakukan sebagai WIB tanpa digeser, sehingga tampilan tetap benar
+ * walaupun timezone PHP di server berbeda (tidak bergantung date_default_timezone).
+ * Nilai berzona (ISO +07:00 / Z) dan epoch milidetik (BSON UTCDateTime)
+ * dikonversi dulu ke Asia/Jakarta.
  */
-function formatDateIndoSimple($dt) {
-    if (empty($dt)) return '-';
-    $ts = is_numeric($dt) ? (int)$dt : strtotime($dt);
-    if (!$ts) return htmlspecialchars((string)$dt);
-    return date('d-m-Y H:i', $ts);
+function emrTanggalIndoSimple($dt)
+{
+    if ($dt === null || $dt === '' || $dt === false) {
+        return '-';
+    }
+
+    $hariArr  = array('Ming', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab');
+    $bulanArr = array('Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des');
+
+    $rapikan = function ($d) use ($hariArr, $bulanArr) {
+        return $hariArr[(int)$d->format('w')] . ', ' . $d->format('j') . ' '
+            . $bulanArr[(int)$d->format('n') - 1] . ' ' . substr($d->format('Y'), 2, 2)
+            . ' ' . $d->format('H:i');
+    };
+
+    $wib = new DateTimeZone('Asia/Jakarta');
+
+    // 1) Nilai BSON (bila Mongo menyimpan last_update sebagai tanggal)
+    if (is_object($dt)) {
+        if ($dt instanceof MongoDB\BSON\UTCDateTime) {
+            $d = $dt->toDateTime();
+            $d->setTimezone($wib);
+            return $rapikan($d);
+        }
+        return htmlspecialchars((string)$dt);
+    }
+
+    $str = trim((string)$dt);
+
+    // 2) Epoch milidetik (dari driver Mongo / API tertentu)
+    if (preg_match('/^\d{12,}$/', $str)) {
+        $d = new DateTime('@' . (int)floor(((float)$str) / 1000));
+        $d->setTimezone($wib);
+        return $rapikan($d);
+    }
+
+    // 3) String tanggal
+    if (preg_match('/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/', $str, $m)) {
+        if (preg_match('/(Z|[+-]\d{2}:?\d{2})$/', $str)) {
+            // ada info zona -> geser ke WIB
+            try {
+                $d = new DateTime($str);
+                $d->setTimezone($wib);
+                return $rapikan($d);
+            } catch (Exception $e) {
+                // lanjut: perlakukan sebagai waktu lokal apa adanya
+            }
+        }
+        // tanpa zona -> waktu lokal apa adanya (WIB) => tidak digeser
+        try {
+            $d = new DateTime($m[0]);
+            return $rapikan($d);
+        } catch (Exception $e) {
+            return htmlspecialchars($str);
+        }
+    }
+
+    // 4) Format lain: serahkan ke strtotime lalu tampilkan apa adanya
+    //    (strtotime & date memakai timezone server yang sama, jadi jam tidak bergeser)
+    $ts = strtotime($str);
+    if (!$ts) {
+        return htmlspecialchars($str);
+    }
+    return $hariArr[(int)date('w', $ts)] . ', ' . date('j', $ts) . ' '
+        . $bulanArr[(int)date('n', $ts) - 1] . ' ' . substr(date('Y', $ts), 2, 2)
+        . ' ' . date('H:i', $ts);
 }
 
-/**
- * Ubah CamelCase / snake menjadi label spasi
- */
-function humanizeEmrName($name) {
-    if ($name === null || $name === '') return 'EMR';
-    $name = str_replace(['_', '-'], ' ', $name);
+/** "SuratPermintaanDirawat" / "surat_permintaan_dirawat" -> "Surat Permintaan Dirawat" */
+function emrHumanize($name)
+{
+    if ($name === null || $name === '') {
+        return 'EMR';
+    }
+    $name = str_replace(array('_', '-'), ' ', (string)$name);
     $name = preg_replace('/([a-z])([A-Z])/', '$1 $2', $name);
     $name = preg_replace('/\s+/', ' ', $name);
     return trim(ucwords(strtolower($name)));
 }
 
 /**
- * Bangun URL cetak EMR (setara H.printBlade emr/cetak/{collection})
+ * ubah url_form dari database menjadi slug halaman frontend Vue.
+ * url_form bisa berbentuk:
+ *   - nama route : module-emr-profile-pasien-page-emr-surat-permintaan-dirawat
+ *   - slug       : surat-permintaan-dirawat
+ *   - path       : /module/emr/profile-pasien/page-emr/surat-permintaan-dirawat
  */
-function buildCetakUrl($baseUrl, $collection, $emrpasienfk, $noregistrasi, $userCetak, $kdProfile, $token) {
-    $collection = rawurlencode($collection);
-    $q = http_build_query([
-        'pdf'         => 'true',
-        'emrpasienfk' => $emrpasienfk,
-        'noregistrasi'=> $noregistrasi,
-        'user'        => $userCetak,
-        'kdprofile'   => $kdProfile,
-        'token'       => $token,
-    ]);
-    return rtrim($baseUrl, '/') . '/service/emr/cetak/' . $collection . '?' . $q;
+function emrSlug($urlForm, $collection)
+{
+    $slug = trim((string)$urlForm);
+    if ($slug !== '') {
+        $slug = str_replace('\\', '/', $slug);
+        if (strpos($slug, '/') !== false) {
+            $parts = array_values(array_filter(explode('/', $slug), 'strlen'));
+            $slug  = end($parts);
+        }
+        $prefix = 'module-emr-profile-pasien-page-emr-';
+        if (stripos($slug, $prefix) === 0) {
+            $slug = substr($slug, strlen($prefix));
+        }
+    }
+    if ($slug === '') {
+        // turunkan dari collection: SuratPermintaanDirawat -> surat-permintaan-dirawat
+        $slug = strtolower(preg_replace('/([a-z0-9])([A-Z])/', '$1-$2', (string)$collection));
+        $slug = str_replace('_', '-', $slug);
+    }
+    return strtolower($slug);
 }
 
 /**
- * Bangun URL buka form EMR di frontend Vue
+ * HTTP GET JSON sederhana.
+ * Utamakan cURL; bila ekstensi cURL tidak aktif (umum di sebagian instalasi
+ * XAMPP/Laragon), pakai file_get_contents + stream context (allow_url_fopen).
  */
-function buildEditUrl($baseUrl, $urlForm, $nocmfk, $norec_pd, $norec_apd, $emrpasienfk) {
-    $slug = $urlForm ?: 'surat-permintaan-dirawat';
-    // url_form di master kadang sudah slug, kadang path penuh
-    $slug = preg_replace('#^/+#', '', $slug);
-    $slug = preg_replace('#^module/emr/profile-pasien/page-emr/#', '', $slug);
-    $q = http_build_query([
-        'nocmfk'              => $nocmfk,
-        'norec_pasien_daftar' => $norec_pd,
-        'norec_pd'            => $norec_pd,
-        'norec_apd'           => $norec_apd,
-        'norec_emr'           => $emrpasienfk,
-        'edit'                => 'true',
-    ]);
-    return rtrim($baseUrl, '/') . '/module/emr/profile-pasien/page-emr/' . $slug . '?' . $q;
-}
-
-/**
- * Coba ambil daftar EMR lewat API Laravel (sama endpoint frontend: /emr/detail-pelayanan)
- * Mengembalikan array item LIST_EMR atau [] jika gagal.
- */
-function fetchEmrFromApi($baseUrl, $norec_pd, $nocmfk, $token) {
-    $url = rtrim($baseUrl, '/') . '/service/emr/detail-pelayanan?' . http_build_query([
-        'norec_pd' => $norec_pd,
-        'nocmfk'   => $nocmfk,
-        'token'    => $token,
-        'kdprofile'=> 1,
-    ]);
+function emrHttpGetJson($url, $headers, $timeout)
+{
     if (!function_exists('curl_init')) {
-        return [];
+        return emrHttpGetJsonStream($url, $headers, $timeout);
     }
     $ch = curl_init();
-    curl_setopt_array($ch, [
+    curl_setopt_array($ch, array(
         CURLOPT_URL            => $url,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_TIMEOUT        => 8,
-        CURLOPT_CONNECTTIMEOUT => 4,
+        CURLOPT_TIMEOUT        => $timeout,
+        CURLOPT_CONNECTTIMEOUT => min(4, $timeout),
         CURLOPT_SSL_VERIFYPEER => false,
         CURLOPT_SSL_VERIFYHOST => false,
-        CURLOPT_HTTPHEADER     => [
-            'Accept: application/json',
-            'token: ' . $token,
-        ],
-    ]);
+        CURLOPT_HTTPHEADER     => $headers,
+    ));
     $body = curl_exec($ch);
     $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err  = curl_error($ch);
     curl_close($ch);
-    if ($code < 200 || $code >= 300 || !$body) {
-        return [];
-    }
-    $json = json_decode($body, true);
-    if (!is_array($json)) {
-        return [];
-    }
-    // Bentuk response bisa { data: { emr: [...] } } atau { emr: [...] } atau langsung array
-    $emr = $json['emr']
-        ?? ($json['data']['emr'] ?? null)
-        ?? ($json['result']['emr'] ?? null);
-    if (!is_array($emr)) {
-        return [];
-    }
-    return $emr;
+    return array(
+        'ok'    => ($code >= 200 && $code < 300 && $body !== false && $body !== ''),
+        'code'  => $code,
+        'body'  => $body,
+        'error' => $err,
+    );
 }
 
 /**
- * Fallback: ambil dari Postgres emrpasien_t (+ mapping caption/icon/url dari emr_t)
- * Setara ringkasan #ResumeEMR bila Mongo tidak tersedia.
+ * Cadangan tanpa cURL: file_get_contents + stream context.
+ * Dipakai bila ekstensi cURL tidak tersedia tetapi allow_url_fopen aktif.
  */
-function fetchEmrFromPostgres(PDO $pdo, $norec_pd, $kdProfile) {
-    $sql = "
-        SELECT
-            ep.norec          AS emrpasienfk,
-            ep.jenisemr,
-            ep.tglemr         AS last_update,
-            ep.namaruangan    AS ruangan,
-            ep.noemr,
-            ep.norec_apd,
-            ep.noregistrasi,
-            ep.nocmfk,
-            COALESCE(pg.namalengkap, '-') AS author,
-            e.caption         AS caption_master,
-            e.url_form        AS url_form_master,
-            e.icon            AS icon_master,
-            e.collection      AS collection_master
-        FROM emrpasien_t ep
-        LEFT JOIN pegawai_m pg ON pg.id = ep.pegawaifk
-        LEFT JOIN LATERAL (
-            SELECT caption, url_form, icon, collection
-            FROM emr_t
-            WHERE statusenabled::text IN ('1','t','true')
-              AND (
-                    collection = ep.jenisemr
-                 OR LOWER(REPLACE(caption, ' ', '')) = LOWER(REPLACE(ep.jenisemr, ' ', ''))
-                 OR url_form = ep.jenisemr
-              )
-            ORDER BY id
-            LIMIT 1
-        ) e ON true
-        WHERE ep.noregistrasifk = :norec_pd
-          AND (ep.statusenabled IS NULL
-               OR ep.statusenabled::text IN ('1','t','true',''))
-          AND (ep.kdprofile IS NULL OR ep.kdprofile = :kdprofile)
-        ORDER BY ep.tglemr DESC NULLS LAST
-    ";
+function emrHttpGetJsonStream($url, $headers, $timeout)
+{
+    if (!ini_get('allow_url_fopen')) {
+        return array('ok' => false, 'code' => 0, 'body' => '', 'error' => 'cURL tidak aktif dan allow_url_fopen OFF');
+    }
+    $ctx = stream_context_create(array(
+        'http' => array(
+            'method'        => 'GET',
+            'header'        => implode("\r\n", $headers),
+            'timeout'       => $timeout,
+            'ignore_errors' => true,
+        ),
+        'ssl'  => array(
+            'verify_peer'      => false,
+            'verify_peer_name' => false,
+        ),
+    ));
+    $body = @file_get_contents($url, false, $ctx);
+    $code = 0;
+    if (!empty($http_response_header)) {
+        foreach ($http_response_header as $h) {
+            if (preg_match('#^HTTP/\S+\s+(\d{3})#', $h, $m)) {
+                $code = (int)$m[1];
+            }
+        }
+    }
+    $ok = ($code >= 200 && $code < 300 && $body !== false && $body !== '');
+    return array(
+        'ok'    => $ok,
+        'code'  => $code,
+        'body'  => $body === false ? '' : $body,
+        'error' => $ok ? '' : 'stream: HTTP ' . $code,
+    );
+}
+
+/**
+ * Baca file .env milik backend Laravel (tm/ biasanya satu folder dengan backend/).
+ * Dipakai untuk: koneksi MongoDB, APP_URL, JWT_KEY.
+ */
+function emrReadBackendEnv($extraPaths = array())
+{
+    $candidates = array(
+        dirname(__DIR__) . '/backend/.env',       // <root>/tm -> <root>/backend/.env
+        dirname(__DIR__, 2) . '/backend/.env',
+        __DIR__ . '/../backend/.env',
+        __DIR__ . '/.env',
+        dirname(__DIR__) . '/.env',
+        '/var/www/html/simrs/backend/.env',
+        '/var/www/simrs/backend/.env',
+        'C:/xampp/htdocs/simrs/backend/.env',
+        'D:/xampp/htdocs/simrs/backend/.env',
+    );
+    // tm/ bisa saja diakses lewat sub-folder webroot (mis. /simrs/tm/)
+    if (!empty($_SERVER['DOCUMENT_ROOT'])) {
+        $docRoot = rtrim(str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT']), '/');
+        $candidates[] = $docRoot . '/backend/.env';
+        $candidates[] = $docRoot . '/../backend/.env';
+        $candidates[] = $docRoot . '/../.env';
+    }
+    $candidates = array_merge($candidates, $extraPaths);
+
+    $envFromServer = getenv('SIMRS_BACKEND_ENV');
+    if ($envFromServer) {
+        array_unshift($candidates, $envFromServer);
+    }
+
+    foreach ($candidates as $path) {
+        if ($path && is_readable($path)) {
+            $data = array();
+            $lines = @file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            if (is_array($lines)) {
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if ($line === '' || $line[0] === '#' || strpos($line, '=') === false) {
+                        continue;
+                    }
+                    list($k, $v) = explode('=', $line, 2);
+                    $k = trim($k);
+                    $v = trim($v);
+                    $len = strlen($v);
+                    if ($len >= 2 && (($v[0] === '"' && $v[$len - 1] === '"') || ($v[0] === "'" && $v[$len - 1] === "'"))) {
+                        $v = substr($v, 1, $len - 2);
+                    }
+                    $data[$k] = $v;
+                }
+            }
+            if (!empty($data)) {
+                return array('path' => $path, 'data' => $data);
+            }
+        }
+    }
+    return array('path' => null, 'data' => array());
+}
+
+/** Konversi nilai BSON -> tipe PHP biasa */
+function emrBsonToPhp($value)
+{
+    if (is_object($value)) {
+        if ($value instanceof MongoDB\BSON\UTCDateTime) {
+            $dt = $value->toDateTime();
+            try {
+                // backend menulis last_update dengan date('Y-m-d H:i:s') (Asia/Jakarta);
+                // bila tersimpan sebagai tipe tanggal BSON, konversi ke WIB agar sama.
+                $dt->setTimezone(new DateTimeZone('Asia/Jakarta'));
+            } catch (Exception $e) {
+                // biarkan UTC bila timezone tidak dikenal
+            }
+            return $dt->format('Y-m-d H:i:s');
+        }
+        if ($value instanceof MongoDB\BSON\ObjectId) {
+            return (string)$value;
+        }
+        if ($value instanceof MongoDB\BSON\Binary) {
+            return null;
+        }
+        if ($value instanceof MongoDB\BSON\Decimal128) {
+            return (string)$value;
+        }
+        if ($value instanceof MongoDB\BSON\Timestamp) {
+            return (string)$value;
+        }
+        // BSONDocument / BSONArray -> array
+        $out = array();
+        foreach ($value as $k => $v) {
+            $out[$k] = emrBsonToPhp($v);
+        }
+        return $out;
+    }
+    if (is_array($value)) {
+        $out = array();
+        foreach ($value as $k => $v) {
+            $out[$k] = emrBsonToPhp($v);
+        }
+        return $out;
+    }
+    return $value;
+}
+
+/**
+ * Dokumen VitalSign terbaru pada #ResumeEMR.
+ * Backend (ProfilePasienCtrl::detailPelayanan) mengeluarkan VitalSign dari daftar
+ * utama, lalu menambahkan SATU dokumen VitalSign terbaru ke response.emr
+ * ($EMR_FORM_). Agar kartu EMR di sini sama dengan halaman Vue, dokumen itu ikut
+ * ditampilkan ("Tanda Vital").
+ */
+function emrFetchVitalMongo($manager, $ns, $norec_pd, $kdProfile, &$diag)
+{
+    $filter = array(
+        'noregistrasifk' => $norec_pd,
+        'table'          => 'VitalSign',
+        'kdprofile'      => (int)$kdProfile,
+        'statusenabled'  => array('$in' => array(true, 1, '1', 'true')),
+    );
     try {
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([
-            ':norec_pd'  => $norec_pd,
-            ':kdprofile' => $kdProfile,
-        ]);
-        return $stmt->fetchAll();
+        $query  = new MongoDB\Driver\Query($filter, array('sort' => array('last_update' => -1), 'limit' => 1));
+        $cursor = $manager->executeQuery($ns, $query);
+        foreach ($cursor as $doc) {
+            return emrBsonToPhp($doc);
+        }
     } catch (Exception $e) {
-        // Query lebih sederhana jika LATERAL/cast gagal
-        $sql2 = "
+        $diag[] = array('mongodb', 'query VitalSign gagal: ' . $e->getMessage());
+    } catch (Error $e) {
+        $diag[] = array('mongodb', 'query VitalSign gagal: ' . $e->getMessage());
+    }
+    return array();
+}
+
+/**
+ * SUMBER 1 — MongoDB "#ResumeEMR" (persis yang dibaca backend -> response.emr)
+ */
+function emrFetchFromMongo($norec_pd, $kdProfile, $collectionName, $mongoDb, $uriList, &$diag)
+{
+    if (!class_exists('MongoDB\Driver\Manager')) {
+        $diag[] = array('mongodb', 'ekstensi PHP mongodb tidak aktif -> dilewati');
+        return array('items' => array(), 'error' => 'ekstensi mongodb tidak aktif');
+    }
+    if (empty($uriList)) {
+        $diag[] = array('mongodb', 'konfigurasi koneksi tidak ditemukan -> dilewati');
+        return array('items' => array(), 'error' => 'konfigurasi mongo tidak ditemukan');
+    }
+
+    $ns = $mongoDb . '.' . $collectionName;
+    $lastError = '';
+
+    foreach ($uriList as $uri) {
+        // Filter ketat dulu (sama seperti ProfilePasienCtrl::detailPelayanan)
+        $filters = array(
+            array(
+                'noregistrasifk' => $norec_pd,
+                'kdprofile'      => (int)$kdProfile,
+                'statusenabled'  => array('$in' => array(true, 1, '1', 'true', 't', 'T', 'Y', 'y')),
+                'table'          => array('$nin' => array('VitalSign', 'AsesmenAwal')),
+            ),
+            // cadangan: tanpa filter statusenabled & table
+            array('noregistrasifk' => $norec_pd),
+        );
+
+        try {
+            $manager = new MongoDB\Driver\Manager($uri, array(), array(
+                'serverSelectionTimeoutMS' => 3000,
+                'connectTimeoutMS'         => 3000,
+            ));
+
+            foreach ($filters as $i => $filter) {
+                $query  = new MongoDB\Driver\Query($filter, array('sort' => array('last_update' => -1), 'limit' => 500));
+                $cursor = $manager->executeQuery($ns, $query);
+
+                $items = array();
+                foreach ($cursor as $doc) {
+                    $items[] = emrBsonToPhp($doc);
+                }
+                if (!empty($items)) {
+                    // Tanda Vital: backend mengeluarkan VitalSign dari daftar utama
+                    // (table != 'VitalSign') lalu menambahkan 1 dokumen terbaru
+                    // ($EMR_FORM_) ke response.emr — frontend tetap menampilkannya.
+                    $vital = emrFetchVitalMongo($manager, $ns, $norec_pd, $kdProfile, $diag);
+                    if (!empty($vital)) {
+                        $items[] = $vital;
+                    }
+                    $diag[] = array('mongodb', 'OK (' . count($items) . ' dokumen) dari ' . preg_replace('/\/\/.*@/', '//***@', $uri) . ' filter#' . ($i + 1));
+                    return array('items' => $items, 'error' => '');
+                }
+                $diag[] = array('mongodb', 'terhubung, filter#' . ($i + 1) . ' = 0 dokumen (' . $ns . ')');
+            }
+            // Terhubung tapi tidak ada dokumen -> anggap sah (memang kosong)
+            return array('items' => array(), 'error' => 'mongo: tidak ada dokumen');
+        } catch (Exception $e) {
+            $lastError = $e->getMessage();
+            $diag[] = array('mongodb', 'gagal koneksi/query: ' . $lastError);
+        } catch (Error $e) {
+            $lastError = $e->getMessage();
+            $diag[] = array('mongodb', 'gagal koneksi/query: ' . $lastError);
+        }
+    }
+    return array('items' => array(), 'error' => $lastError !== '' ? $lastError : 'mongo tidak terjangkau');
+}
+
+/** base64url tanpa padding (format JWT) */
+function emrB64Url($bin)
+{
+    return rtrim(strtr(base64_encode($bin), '+/', '-_'), '=');
+}
+
+/** Baca payload JWT tanpa verifikasi (hanya untuk mengambil "sub"/username) */
+function emrJwtPayload($token)
+{
+    $parts = explode('.', trim((string)$token));
+    if (count($parts) < 2) {
+        return array();
+    }
+    $payload = $parts[1];
+    $pad = strlen($payload) % 4;
+    if ($pad) {
+        $payload .= str_repeat('=', 4 - $pad);
+    }
+    $json = json_decode(base64_decode(strtr($payload, '-_', '+/')), true);
+    return is_array($json) ? $json : array();
+}
+
+/**
+ * Buat token JWT sendiri (HS512) memakai JWT_KEY Laravel.
+ * Middleware JWTAuth membentuk token 4 segmen: header.payload.signature.base64(kdProfile).
+ */
+function emrMintToken($username, $kdProfile, $jwtKey, $melebihiMenit = 120)
+{
+    $header  = array('typ' => 'JWT', 'alg' => 'HS512');
+    $payload = array(
+        'sub'       => $username,
+        'sessionId' => '',
+        'exp'       => time() + ($melebihiMenit * 60),
+    );
+    $body = emrB64Url(json_encode($header)) . '.' . emrB64Url(json_encode($payload));
+    $sig  = emrB64Url(hash_hmac('sha512', $body, $jwtKey, true));
+    return $body . '.' . $sig . '.' . base64_encode((string)$kdProfile);
+}
+
+/**
+ * SUMBER 2 — REST API Laravel: /service/emr/detail-pelayanan
+ * Envelope: { metaData:{code,message}, response:{ emr:[...], ... } }
+ */
+function emrFetchFromApi($apiBase, $params, $tokens, &$diag)
+{
+    $lastError = '';
+    foreach ($tokens as $tokenInfo) {
+        $token = $tokenInfo['token'];
+        $url   = rtrim($apiBase, '/') . '/emr/detail-pelayanan?' . http_build_query(array_merge($params, array('token' => $token)));
+        $res   = emrHttpGetJson($url, array(
+            'Accept: application/json',
+            'token: ' . $token,
+            'skip_encrypt: true',
+        ), 25);
+
+        if (!$res['ok']) {
+            $lastError = 'HTTP ' . $res['code'] . ($res['error'] ? ' ' . $res['error'] : '');
+            $diag[] = array('api', 'token[' . $tokenInfo['label'] . '] gagal: ' . $lastError);
+            continue;
+        }
+
+        $json = json_decode($res['body'], true);
+        if (!is_array($json)) {
+            $lastError = 'response bukan JSON';
+            $diag[] = array('api', 'token[' . $tokenInfo['label'] . ']: response bukan JSON');
+            continue;
+        }
+
+        $code  = isset($json['metaData']['code']) ? (int)$json['metaData']['code'] : 200;
+        $pesan = isset($json['metaData']['message']) ? $json['metaData']['message'] : '';
+        if ($code !== 200) {
+            $lastError = 'metaData.code=' . $code . ' (' . $pesan . ')';
+            $diag[] = array('api', 'token[' . $tokenInfo['label'] . '] ditolak: ' . $lastError);
+            continue;
+        }
+
+        // ==== inti perbaikan: envelope Laravel = response.emr ====
+        $envelope = isset($json['response']) && is_array($json['response']) ? $json['response'] : $json;
+        $emr      = null;
+        foreach (array('emr', 'EMR', 'listEmr', 'listEMR') as $key) {
+            if (isset($envelope[$key]) && is_array($envelope[$key])) {
+                $emr = $envelope[$key];
+                break;
+            }
+        }
+        if ($emr === null && isset($json['emr']) && is_array($json['emr'])) {
+            $emr = $json['emr'];
+        }
+        if ($emr === null) {
+            $lastError = 'field "response.emr" tidak ada pada response';
+            $diag[] = array('api', 'token[' . $tokenInfo['label'] . ']: ' . $lastError);
+            continue;
+        }
+
+        $diag[] = array('api', 'OK (' . count($emr) . ' item) token[' . $tokenInfo['label'] . ']');
+        return array('items' => $emr, 'token' => $token, 'error' => '');
+    }
+    return array('items' => array(), 'token' => '', 'error' => ($lastError !== '' ? $lastError : 'API tidak terjangkau'));
+}
+
+/**
+ * SUMBER 3 — PostgreSQL (mode terbatas):
+ *   emrpasien_t  -> 1 baris per dokumen yang pernah disimpan
+ *   logginguser_t (referensi='EMR') -> collection & nama form
+ *   emr_t        -> caption resmi per collection / url_form
+ */
+function emrFetchFromPostgres($pdo, $norec_pd, $kdProfile, &$diag)
+{
+    if (!$pdo) {
+        return array('items' => array(), 'error' => 'koneksi postgres tidak ada');
+    }
+    try {
+        $sql = "
             SELECT
-                ep.norec AS emrpasienfk,
+                ep.norec            AS emrpasienfk,
                 ep.jenisemr,
-                ep.tglemr AS last_update,
-                ep.namaruangan AS ruangan,
+                ep.tglemr           AS last_update,
+                ep.namaruangan      AS ruangan,
                 ep.noemr,
                 ep.norec_apd,
                 ep.noregistrasi,
@@ -233,318 +686,803 @@ function fetchEmrFromPostgres(PDO $pdo, $norec_pd, $kdProfile) {
             FROM emrpasien_t ep
             LEFT JOIN pegawai_m pg ON pg.id = ep.pegawaifk
             WHERE ep.noregistrasifk = :norec_pd
-              AND (ep.statusenabled IS NULL OR ep.statusenabled::text IN ('1','t','true',''))
+              AND (ep.statusenabled IS NULL OR ep.statusenabled::text IN ('1', 't', 'true', ''))
             ORDER BY ep.tglemr DESC NULLS LAST
         ";
-        $stmt = $pdo->prepare($sql2);
-        $stmt->execute([':norec_pd' => $norec_pd]);
-        return $stmt->fetchAll();
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute(array(':norec_pd' => $norec_pd));
+        $rows = $stmt->fetchAll();
+    } catch (Exception $e) {
+        $diag[] = array('postgres', 'query emrpasien_t gagal: ' . $e->getMessage());
+        return array('items' => array(), 'error' => $e->getMessage());
     }
+
+    if (empty($rows)) {
+        return array('items' => array(), 'error' => 'postgres: tidak ada data EMR');
+    }
+
+    // ---- Referensi nama resmi dari emr_t (caption per collection / url_form) ----
+    $refByCollection = array();
+    $refByUrl        = array();
+    try {
+        $refStmt = $pdo->query("SELECT caption, url_form, collection, icon FROM emr_t
+                                WHERE statusenabled IS NULL OR statusenabled::text IN ('1','t','true')");
+        foreach ($refStmt->fetchAll() as $ref) {
+            $collection = strtolower(trim((string)$ref['collection']));
+            $url        = strtolower(trim((string)$ref['url_form']));
+            $caption    = trim((string)$ref['caption']);
+            $icon       = trim((string)$ref['icon']);
+            if ($collection !== '' && $caption !== '' && !isset($refByCollection[$collection])) {
+                $refByCollection[$collection] = array('nama' => $caption, 'icon' => $icon, 'url' => $ref['url_form']);
+            }
+            if ($url !== '' && $caption !== '' && !isset($refByUrl[$url])) {
+                $refByUrl[$url] = array('nama' => $caption, 'icon' => $icon, 'url' => $ref['url_form']);
+            }
+        }
+        $diag[] = array('postgres', 'referensi emr_t: ' . count($refByCollection) . ' collection / ' . count($refByUrl) . ' url_form');
+    } catch (Exception $e) {
+        $diag[] = array('postgres', 'referensi emr_t gagal: ' . $e->getMessage());
+    }
+
+    // ---- Log EMR: collection + nama form per emrpasien_t.norec ----
+    $logByNorec = array();
+    $ids = array();
+    foreach ($rows as $r) {
+        if (!empty($r['emrpasienfk'])) {
+            $ids[] = $r['emrpasienfk'];
+        }
+    }
+    if (!empty($ids)) {
+        try {
+            $place = array();
+            $bind  = array();
+            foreach ($ids as $i => $id) {
+                $key           = ':id' . $i;
+                $place[]       = $key;
+                $bind[$key]    = $id;
+            }
+            $logSql = "SELECT noreff, jenislog, keterangan, namapegawai, tanggal
+                       FROM logginguser_t
+                       WHERE referensi = 'EMR' AND noreff IN (" . implode(',', $place) . ")
+                       ORDER BY tanggal DESC";
+            $logStmt = $pdo->prepare($logSql);
+            $logStmt->execute($bind);
+            foreach ($logStmt->fetchAll() as $log) {
+                $noreff = $log['noreff'];
+                if (!isset($logByNorec[$noreff])) {
+                    $logByNorec[$noreff] = $log;
+                }
+            }
+            $diag[] = array('postgres', 'log EMR: ' . count($logByNorec) . ' dokumen teridentifikasi');
+        } catch (Exception $e) {
+            $diag[] = array('postgres', 'query logginguser_t gagal: ' . $e->getMessage());
+        }
+    }
+
+    // ---- Susun item ----
+    $items = array();
+    foreach ($rows as $r) {
+        $norec     = $r['emrpasienfk'];
+        $collection = '';
+        $nama       = '';
+        $icon       = '';
+
+        $log = isset($logByNorec[$norec]) ? $logByNorec[$norec] : null;
+        if ($log) {
+            $collection = trim((string)$log['jenislog']);
+            $ket        = trim((string)$log['keterangan']);
+            // keterangan: 'input EMR <NAMA FORM> dari pasien dengan no registrasi ...'
+            if (preg_match('/input EMR (.+?) dari pasien/i', $ket, $m)) {
+                $nama = trim($m[1]);
+            } elseif (preg_match('/^Edit EMR (.+?) dari pasien/i', $ket, $m)) {
+                $nama = trim($m[1]);
+            }
+            if ($log['namapegawai']) {
+                $r['author'] = $log['namapegawai'];
+            }
+        }
+
+        // Nama resmi dari master emr_t (collection diprioritaskan)
+        $keyCol = strtolower($collection);
+        $keyJen = strtolower(trim((string)$r['jenisemr']));
+        if ($keyCol !== '' && isset($refByCollection[$keyCol])) {
+            if ($nama === '') {
+                $nama = $refByCollection[$keyCol]['nama'];
+            }
+            $icon = $refByCollection[$keyCol]['icon'];
+        } elseif ($keyJen !== '' && isset($refByCollection[$keyJen])) {
+            if ($nama === '') {
+                $nama = $refByCollection[$keyJen]['nama'];
+            }
+            if ($collection === '') {
+                $collection = $refByCollection[$keyJen]['url'];
+            }
+            $icon = $refByCollection[$keyJen]['icon'];
+        } elseif ($keyJen !== '' && isset($refByUrl[$keyJen])) {
+            if ($nama === '') {
+                $nama = $refByUrl[$keyJen]['nama'];
+            }
+            if ($collection === '') {
+                $collection = $refByUrl[$keyJen]['url'];
+            }
+            $icon = $refByUrl[$keyJen]['icon'];
+        }
+
+        // Fallback terakhir: label dari jenisemr (tidak menyesatkan)
+        if ($nama === '') {
+            $nama = ($keyJen === '' || $keyJen === 'asesmen_medis' || $keyJen === 'asesmen medis')
+                ? 'Dokumen EMR (nama form tidak tersedia)'
+                : emrHumanize($keyJen);
+        }
+
+        $r['log_collection'] = $collection;
+        $r['log_nama']       = $nama;
+        $r['log_icon']       = $icon;
+        $items[] = $r;
+    }
+
+    $diag[] = array('postgres', 'OK (' . count($items) . ' baris emrpasien_t)');
+    return array('items' => $items, 'error' => '');
 }
 
 /**
- * Normalisasi item EMR ke struktur seragam (mirip LIST_EMR Vue)
+ * Ambil satu field dari referensi emr_t.
+ * $refCollection mendukung dua bentuk nilai:
+ *   - string                      : caption saja (kompatibel kode lama)
+ *   - array('nama','url','icon')  : lengkap (dipakai mulai revisi ini)
  */
-function normalizeEmrItem(array $item) {
-    $table = $item['table']
-        ?? $item['collection']
-        ?? $item['collection_master']
-        ?? $item['jenisemr']
-        ?? '';
-    $nama = $item['namaemr']
-        ?? $item['caption']
-        ?? $item['caption_master']
-        ?? humanizeEmrName($table ?: ($item['jenisemr'] ?? 'EMR'));
-    $urlForm = $item['url_form']
-        ?? $item['url_form_master']
-        ?? '';
-    // Jika url_form kosong, turunkan dari collection (CamelCase -> kebab)
-    if ($urlForm === '' && $table !== '') {
-        $urlForm = strtolower(preg_replace('/([a-z])([A-Z])/', '$1-$2', $table));
-        $urlForm = str_replace('_', '-', $urlForm);
+function emrRefGet($refCollection, $collection, $field)
+{
+    $key = strtolower(trim((string)$collection));
+    if ($key === '' || !isset($refCollection[$key])) {
+        return '';
     }
-    $icon = $item['icon'] ?? $item['icon_master'] ?? 'fas fa-laptop-medical';
-    if (empty($icon)) $icon = 'fas fa-laptop-medical';
+    $ref = $refCollection[$key];
+    if (is_array($ref)) {
+        if ($field === 'nama') {
+            return isset($ref['nama']) ? $ref['nama'] : '';
+        }
+        if ($field === 'url') {
+            return isset($ref['url']) ? $ref['url'] : '';
+        }
+        if ($field === 'icon') {
+            return isset($ref['icon']) ? $ref['icon'] : '';
+        }
+        return '';
+    }
+    return ($field === 'nama') ? (string)$ref : '';
+}
 
-    return [
-        'emrpasienfk' => $item['emrpasienfk'] ?? $item['norec'] ?? '',
-        'namaemr'     => $nama,
-        'table'       => $table,
-        'url_form'    => $urlForm,
-        'last_update' => $item['last_update'] ?? $item['tglemr'] ?? null,
-        'ruangan'     => $item['ruangan'] ?? $item['namaruangan'] ?? '',
-        'author'      => $item['author'] ?? '-',
-        'icon'        => $icon,
-        'noemr'       => $item['noemr'] ?? '',
-    ];
+/**
+ * Normalisasi item dari sumber manapun ke struktur LIST_EMR frontend:
+ *   emrpasienfk, namaemr, table, url_form, last_update, ruangan, author, icon, noemr
+ */
+function emrNormalizeItem($item, $refCollection = array())
+{
+    $emrpasienfk = '';
+    foreach (array('emrpasienfk', 'norec', 'norec_emr') as $k) {
+        if (!empty($item[$k])) {
+            $emrpasienfk = $item[$k];
+            break;
+        }
+    }
+
+    $collection = '';
+    foreach (array('table', 'collection', 'log_collection', 'collection_master') as $k) {
+        if (!empty($item[$k])) {
+            $collection = $item[$k];
+            break;
+        }
+    }
+
+    $jenis = isset($item['jenisemr']) ? $item['jenisemr'] : '';
+
+    $nama = '';
+    foreach (array('namaemr', 'log_nama', 'caption', 'caption_master') as $k) {
+        if (isset($item[$k]) && trim((string)$item[$k]) !== '') {
+            $nama = trim((string)$item[$k]);
+            break;
+        }
+    }
+    if ($nama === '') {
+        // nama resmi dari master emr_t (bila dokumen tidak membawa namaemr)
+        $nama = emrRefGet($refCollection, $collection, 'nama');
+    }
+    if ($nama === '' && $jenis !== '' && strtolower($jenis) !== 'asesmen_medis') {
+        $nama = emrHumanize($jenis);
+    }
+    if ($nama === '') {
+        $nama = emrRefGet($refCollection, $jenis, 'nama');
+    }
+    if ($nama === '') {
+        $nama = 'Dokumen EMR (nama form tidak tersedia)';
+    }
+
+    // url_form -> slug halaman Vue
+    $urlForm = '';
+    foreach (array('url_form', 'url_form_master') as $k) {
+        if (!empty($item[$k])) {
+            $urlForm = $item[$k];
+            break;
+        }
+    }
+    if ($urlForm === '') {
+        // master emr_t: url_form resmi untuk collection / jenisemr
+        $urlForm = emrRefGet($refCollection, $collection, 'url');
+        if ($urlForm === '') {
+            $urlForm = emrRefGet($refCollection, $jenis, 'url');
+        }
+    }
+
+    $icon = '';
+    foreach (array('icon', 'icon_master', 'log_icon') as $k) {
+        if (!empty($item[$k])) {
+            $icon = $item[$k];
+            break;
+        }
+    }
+    if ($icon === '') {
+        $icon = emrRefGet($refCollection, $collection, 'icon');
+    }
+    if ($icon === '') {
+        $icon = 'fas fa-laptop-medical';
+    }
+
+    $lastUpdate = null;
+    foreach (array('last_update', 'tglemr', 'updated_at', 'created_at') as $k) {
+        if (!empty($item[$k])) {
+            $lastUpdate = $item[$k];
+            break;
+        }
+    }
+
+    $ruangan = '';
+    foreach (array('ruangan', 'namaruangan') as $k) {
+        if (!empty($item[$k])) {
+            $ruangan = $item[$k];
+            break;
+        }
+    }
+
+    return array(
+        'emrpasienfk'   => (string)$emrpasienfk,
+        'namaemr'       => $nama,
+        'table'         => (string)$collection,
+        'url_form'      => (string)$urlForm,
+        'slug'          => emrSlug($urlForm, $collection),
+        'last_update'   => $lastUpdate,
+        'ruangan'       => (string)$ruangan,
+        'author'        => isset($item['author']) && trim((string)$item['author']) !== ''
+                            ? trim((string)$item['author']) : '-',
+        'icon'          => $icon,
+        'noemr'         => isset($item['noemr']) ? (string)$item['noemr'] : '',
+        'noregistrasi'  => isset($item['noregistrasi']) && $item['noregistrasi'] !== '' ? (string)$item['noregistrasi'] : '',
+        'nocmfk'        => isset($item['nocmfk']) ? (string)$item['nocmfk'] : '',
+        'norec_apd'     => isset($item['norec_apd']) ? (string)$item['norec_apd'] : '',
+    );
+}
+
+/** Bangun URL buka / ubah form EMR (frontend Vue) */
+function emrBuildEditUrl($webBase, $slug, $nocmfk, $norec_pd, $norec_apd, $emrpasienfk)
+{
+    $q = http_build_query(array(
+        'nocmfk'              => $nocmfk,
+        'norec_pasien_daftar' => $norec_pd,
+        'norec_pd'            => $norec_pd,
+        'norec_apd'           => $norec_apd,
+        'jenisobgyn'          => '',
+        'jenisinterna'        => '',
+        'jenistrauma'         => '',
+        'norec_emr'           => $emrpasienfk,
+        'edit'                => 'true',
+    ));
+    return rtrim($webBase, '/') . '/module/emr/profile-pasien/page-emr/' . rawurlencode($slug) . '?' . $q;
+}
+
+/** Bangun URL cetak EMR: {apiBase}/emr/cetak/{collection}?... (H.printBlade) */
+function emrBuildCetakUrl($apiBase, $collection, $emrpasienfk, $noregistrasi, $userCetak, $kdProfile, $token)
+{
+    $q = http_build_query(array(
+        'pdf'          => 'true',
+        'emrpasienfk'  => $emrpasienfk,
+        'noregistrasi' => $noregistrasi,
+        'user'         => $userCetak,
+        'kdprofile'    => $kdProfile,
+        'token'        => $token,
+    ));
+    return rtrim($apiBase, '/') . '/emr/cetak/' . rawurlencode(trim($collection)) . '?' . $q;
 }
 
 // ============================================================
-// AMBIL DATA EMR
+// AMBIL DATA EMR (MongoDB -> API -> PostgreSQL)
 // ============================================================
-$rawEmr = fetchEmrFromApi($baseUrl, $norec_pd, $nocmfk, $token);
-$source = 'api';
-if (empty($rawEmr)) {
-    $rawEmr = fetchEmrFromPostgres($pdo, $norec_pd, $kdProfile);
-    $source = 'postgres';
+$envInfo  = emrReadBackendEnv();
+$env      = $envInfo['data'];
+$envPath  = $envInfo['path'];
+$diag[]   = array('env', $envPath ? ('dibaca dari ' . $envPath) : 'tidak ditemukan (pakai nilai default)');
+
+// --- APP_URL & JWT_KEY dari .env (bila tidak di-override manual) ---
+if (isset($env['APP_URL']) && $env['APP_URL'] !== '' && $apiBase === 'https://192.168.22.81/service') {
+    $apiBase = rtrim($env['APP_URL'], '/') . '/service';
+    $diag[] = array('config', 'apiBase dari .env: ' . $apiBase);
+}
+$jwtKey = $jwtKeyManual !== '' ? $jwtKeyManual : (isset($env['JWT_KEY']) && $env['JWT_KEY'] !== '' ? $env['JWT_KEY'] : 'TRANSINDO');
+
+// --- Kandidat URI MongoDB ---
+$mongoDb = $mongoDbManual !== '' ? $mongoDbManual : (isset($env['DB_DATABASE_MONGO']) && $env['DB_DATABASE_MONGO'] !== '' ? $env['DB_DATABASE_MONGO'] : 'transmedic_v3');
+$uriList = array();
+if ($mongoUriManual !== '') {
+    $uriList[] = $mongoUriManual;
+} else {
+    if (!empty($env['DATABASE_URL_MONGO'])) {
+        $uriList[] = $env['DATABASE_URL_MONGO'];
+    }
+    $mHost = !empty($env['DB_HOST_MONGO']) ? $env['DB_HOST_MONGO'] : '';
+    if ($mHost !== '') {
+        $mPort = !empty($env['DB_PORT_MONGO']) ? $env['DB_PORT_MONGO'] : '27017';
+        $mUser = !empty($env['DB_USERNAME_MONGO']) ? $env['DB_USERNAME_MONGO'] : '';
+        $mPass = !empty($env['DB_PASSWORD_MONGO']) ? $env['DB_PASSWORD_MONGO'] : '';
+        $auth  = ($mUser !== '') ? rawurlencode($mUser) . ':' . rawurlencode($mPass) . '@' : '';
+        // backend/config/database.php memakai options.database = 'admin' utk autentikasi
+        $uriList[] = 'mongodb://' . $auth . $mHost . ':' . $mPort . '/?authSource=admin';
+    }
+    // cadangan: mongo lokal pada server yang sama
+    $uriList[] = 'mongodb://127.0.0.1:27017/?authSource=admin';
+    $uriList[] = 'mongodb://localhost:27017/?authSource=admin';
+    // cadangan: mongo pada server database SIMRS (host yang sama dengan Postgres)
+    if (!empty($host) && $host !== '127.0.0.1' && $host !== 'localhost') {
+        $uriList[] = 'mongodb://' . $host . ':27017/?authSource=admin';
+    }
+}
+$diag[] = array('mongodb', 'db=' . $mongoDb . ', collection=' . $mongoCollection . ', kandidat URI=' . count($uriList));
+
+// === 1. MongoDB ===
+$mongoRes = emrFetchFromMongo($norec_pd, $kdProfile, $mongoCollection, $mongoDb, $uriList, $diag);
+$rawItems = $mongoRes['items'];
+$source   = 'mongodb';
+$sourceLabel = 'MongoDB ' . $mongoDb . '.' . $mongoCollection;
+$limited  = false;
+$sourceError = $mongoRes['error'];
+$workingToken = '';
+
+// === 2. REST API Laravel ===
+if (empty($rawItems)) {
+    $tokenCandidates = array();
+    if ($tokenFromUrl !== '') {
+        $tokenCandidates[] = array('label' => 'url/session', 'token' => $tokenFromUrl);
+    }
+    if (!empty($tokenDefault)) {
+        $tokenCandidates[] = array('label' => 'default', 'token' => $tokenDefault);
+    }
+    // token buatan sendiri (JWT_KEY dari .env / default 'TRANSINDO')
+    if ($pdo) {
+        try {
+            $payload     = emrJwtPayload($tokenCandidates ? $tokenCandidates[0]['token'] : $tokenDefault);
+            $preferUser  = isset($payload['sub']) ? $payload['sub'] : '';
+            $userSql     = "SELECT namauser FROM loginuser_s
+                            WHERE kdprofile = :kd AND statusenabled::text IN ('1','t','true')
+                              AND namauser IS NOT NULL AND namauser <> ''
+                            ORDER BY id";
+            $userStmt = $pdo->prepare($userSql);
+            $userStmt->execute(array(':kd' => $kdProfile));
+            $userList = $userStmt->fetchAll(PDO::FETCH_COLUMN);
+            if ($preferUser !== '' && in_array($preferUser, $userList, true)) {
+                array_unshift($userList, $preferUser);
+            }
+            $minted = array();
+            foreach (array_slice($userList, 0, 3) as $uName) {
+                if (in_array($uName, $minted, true)) {
+                    continue;
+                }
+                $minted[] = $uName;
+                $tokenCandidates[] = array('label' => 'buatan:' . $uName, 'token' => emrMintToken($uName, $kdProfile, $jwtKey));
+            }
+            $diag[] = array('api', 'kandidat token buatan: ' . implode(', ', $minted));
+        } catch (Exception $e) {
+            $diag[] = array('api', 'gagal menyiapkan token buatan: ' . $e->getMessage());
+        }
+    }
+
+    $apiRes = emrFetchFromApi($apiBase, array(
+        'norec_pd'  => $norec_pd,
+        'nocmfk'    => $nocmfk,
+        'kdprofile' => $kdProfile,
+    ), $tokenCandidates, $diag);
+
+    if (!empty($apiRes['items'])) {
+        $rawItems     = $apiRes['items'];
+        $source       = 'api';
+        $sourceLabel  = 'Laravel API /emr/detail-pelayanan (response.emr)';
+        $workingToken = $apiRes['token'];
+        $sourceError  = '';
+    } elseif ($apiRes['error']) {
+        $sourceError = ($sourceError !== '' ? $sourceError . ' | ' : '') . 'api: ' . $apiRes['error'];
+    }
 }
 
-$listEmr = [];
-foreach ($rawEmr as $row) {
+// === 3. PostgreSQL (mode terbatas) ===
+if (empty($rawItems)) {
+    $pgRes    = emrFetchFromPostgres($pdo, $norec_pd, $kdProfile, $diag);
+    $rawItems = $pgRes['items'];
+    if (!empty($rawItems)) {
+        $source      = 'postgres';
+        $sourceLabel = 'Database SIMRS (emrpasien_t + logginguser_t + emr_t)';
+        $limited     = true;
+        $sourceError = '';
+    } elseif ($pgRes['error']) {
+        $sourceError = ($sourceError !== '' ? $sourceError . ' | ' : '') . 'postgres: ' . $pgRes['error'];
+    }
+}
+
+// Referensi cadangan dari master emr_t (collection -> caption / url_form / icon).
+// Dipakai bila dokumen #ResumeEMR tidak membawa namaemr / url_form / icon
+// (mis. dokumen lama atau collection baru yang belum lengkap datanya).
+$refCollection = array();
+if ($pdo && $source !== 'postgres') {
+    try {
+        $refStmt = $pdo->query("SELECT caption, url_form, collection, icon FROM emr_t
+                                WHERE caption IS NOT NULL AND collection IS NOT NULL
+                                  AND (statusenabled IS NULL OR statusenabled::text IN ('1','t','true'))");
+        foreach ($refStmt->fetchAll() as $ref) {
+            $key = strtolower(trim((string)$ref['collection']));
+            if ($key !== '' && !isset($refCollection[$key])) {
+                $refCollection[$key] = array(
+                    'nama' => trim((string)$ref['caption']),
+                    'url'  => trim((string)$ref['url_form']),
+                    'icon' => trim((string)$ref['icon']),
+                );
+            }
+        }
+        $diag[] = array('postgres', 'referensi cadangan emr_t: ' . count($refCollection) . ' collection');
+    } catch (Exception $e) {
+        $diag[] = array('postgres', 'referensi nama cadangan gagal: ' . $e->getMessage());
+    }
+}
+
+// Bentuk response.emr bila datang dari API (bisa stdClass)
+$listEmr = array();
+foreach ($rawItems as $row) {
+    if (is_object($row)) {
+        $row = emrBsonToPhp($row);
+    }
     if (!is_array($row)) {
-        // stdClass dari json
-        $row = (array)$row;
-    }
-    $norm = normalizeEmrItem($row);
-    // Skip vital sign (sama filter backend)
-    if (in_array(strtolower((string)$norm['table']), ['vitalsign', 'vital_sign'], true)) {
         continue;
     }
-    if ($norm['emrpasienfk'] === '' && $norm['table'] === '') {
+    $item = emrNormalizeItem($row, $refCollection);
+
+    // AsesmenAwal dikelola terpisah di frontend (t-emr-asesmen-awal.vue),
+    // VitalSign tetap ditampilkan tetapi hanya yang terbaru (lihat di bawah).
+    $tbl = strtolower($item['table']);
+    if ($tbl === 'assesmenawal' || $tbl === 'asesmenawal') {
         continue;
     }
-    $listEmr[] = $norm;
+    if ($item['emrpasienfk'] === '' && $item['table'] === '' && $item['namaemr'] === '') {
+        continue;
+    }
+    $listEmr[] = $item;
 }
 
-// Filter pencarian (client-side juga ada, server-side bila ?q=)
+// VitalSign: ambil hanya 1 yang terbaru (sama seperti $EMR_FORM_ pada backend)
+$vitalIdx = -1;
+foreach ($listEmr as $i => $it) {
+    $t = strtolower($it['table']);
+    if ($t !== 'vitalsign' && $t !== 'vital_sign') {
+        continue;
+    }
+    if ($vitalIdx === -1) {
+        $vitalIdx = $i;
+        continue;
+    }
+    $tNew = $listEmr[$i]['last_update'] ? strtotime((string)$listEmr[$i]['last_update']) : 0;
+    $tOld = $listEmr[$vitalIdx]['last_update'] ? strtotime((string)$listEmr[$vitalIdx]['last_update']) : 0;
+    if ($tNew > $tOld) {
+        $old = $vitalIdx;
+        $vitalIdx = $i;
+        unset($listEmr[$old]);
+    } else {
+        unset($listEmr[$i]);
+    }
+}
+$listEmr = array_values($listEmr);
+
+// Hindari kartu ganda: satu dokumen EMR = satu emrpasienfk + satu collection.
+// ($emrpasienfk kosong tidak dianggap duplikat karena bisa berbeda dokumen.)
+$seenDoc = array();
+foreach ($listEmr as $i => $it) {
+    if ($it['emrpasienfk'] === '') {
+        continue;
+    }
+    $key = strtolower($it['table']) . '|' . $it['emrpasienfk'];
+    if (isset($seenDoc[$key])) {
+        unset($listEmr[$i]);
+        continue;
+    }
+    $seenDoc[$key] = true;
+}
+$listEmr = array_values($listEmr);
+
+// urutkan terbaru di atas
+usort($listEmr, function ($a, $b) {
+    $ta = $a['last_update'] ? strtotime((string)$a['last_update']) : 0;
+    $tb = $b['last_update'] ? strtotime((string)$b['last_update']) : 0;
+    if ($ta === $tb) {
+        return 0;
+    }
+    return ($ta < $tb) ? 1 : -1;
+});
+
+// pencarian sisi server (opsional, dipakai bila ?q=)
 if ($qSearch !== '') {
-    $qLower = mb_strtolower($qSearch);
+    $qLower = strtolower($qSearch);
     $listEmr = array_values(array_filter($listEmr, function ($it) use ($qLower) {
-        return (strpos(mb_strtolower($it['namaemr']), $qLower) !== false)
-            || (strpos(mb_strtolower((string)$it['author']), $qLower) !== false)
-            || (strpos(mb_strtolower((string)$it['ruangan']), $qLower) !== false)
-            || (strpos(mb_strtolower((string)$it['table']), $qLower) !== false);
+        $hay = strtolower($it['namaemr'] . ' ' . $it['author'] . ' ' . $it['ruangan'] . ' ' . $it['table']);
+        return strpos($hay, $qLower) !== false;
     }));
 }
 
-// Ambil norec terbaru per collection untuk tombol cetak cepat
-$latestByCollection = [];
+// token untuk link cetak: pakai token yang terbukti valid (bila ada)
+$tokenCetak = $workingToken !== '' ? $workingToken : ($tokenFromUrl !== '' ? $tokenFromUrl : $tokenDefault);
+
+// warna ikon (mirip VIconBox pada frontend)
+$listColor = array('info', 'success', 'warning', 'danger', 'purple', 'orange', 'primary', 'blue', 'green', 'indigo');
+$colorHex  = array(
+    'info'    => array('bg' => '#dbeafe', 'fg' => '#1d4ed8'),
+    'success' => array('bg' => '#d1fae5', 'fg' => '#047857'),
+    'warning' => array('bg' => '#fef3c7', 'fg' => '#b45309'),
+    'danger'  => array('bg' => '#fee2e2', 'fg' => '#b91c1c'),
+    'purple'  => array('bg' => '#ede9fe', 'fg' => '#6d28d9'),
+    'orange'  => array('bg' => '#ffedd5', 'fg' => '#c2410c'),
+    'primary' => array('bg' => '#e0e7ff', 'fg' => '#4338ca'),
+    'blue'    => array('bg' => '#dbeafe', 'fg' => '#2563eb'),
+    'green'   => array('bg' => '#dcfce7', 'fg' => '#15803d'),
+    'indigo'  => array('bg' => '#e0e7ff', 'fg' => '#4338ca'),
+);
+
+// cetak cepat (collection -> label tombol)
+$quickPrintMap = array(
+    'suratpermintaandirawat' => array('collection' => 'SuratPermintaanDirawat',  'label' => 'Cetak SPRI',            'color' => 'bg-green-600 hover:bg-green-700',     'icon' => 'fas fa-file-medical-alt'),
+    'rujukanpasien'          => array('collection' => 'RujukanPasien',           'label' => 'Cetak Rujukan Manual',  'color' => 'bg-red-600 hover:bg-red-700',         'icon' => 'fas fa-print'),
+    'resumemedis'            => array('collection' => 'resumeMedis',             'label' => 'Cetak Resume Medis',    'color' => 'bg-emerald-600 hover:bg-emerald-700', 'icon' => 'fas fa-notes-medical'),
+    'ringkasankeluar'        => array('collection' => 'RingkasanKeluar',         'label' => 'Cetak Ringkasan Pulang','color' => 'bg-indigo-600 hover:bg-indigo-700',   'icon' => 'fas fa-file-alt'),
+);
+$latestByCollection = array();
 foreach ($listEmr as $it) {
-    $key = $it['table'] ?: $it['namaemr'];
-    if ($key === '') continue;
+    $key = strtolower($it['table'] !== '' ? $it['table'] : '');
+    if ($key === '') {
+        continue;
+    }
     if (!isset($latestByCollection[$key])) {
         $latestByCollection[$key] = $it;
     }
 }
-// Juga pastikan SPRI dari parameter emr_surat_fk
-if ($emr_surat_fk !== '' && !isset($latestByCollection['SuratPermintaanDirawat'])) {
-    $latestByCollection['SuratPermintaanDirawat'] = [
-        'emrpasienfk' => $emr_surat_fk,
-        'table'       => 'SuratPermintaanDirawat',
-        'namaemr'     => 'Surat Permintaan Dirawat',
-    ];
-}
-
-$noregForLink = $noregistrasi;
-if ($noregForLink === '' && !empty($listEmr[0]['noemr'])) {
-    // fallback kosong — biarkan
+// pastikan SPRI dari parameter emr_surat_fk
+if ($emr_surat_fk !== '' && !isset($latestByCollection['suratpermintaandirawat'])) {
+    $latestByCollection['suratpermintaandirawat'] = array(
+        'emrpasienfk'  => $emr_surat_fk,
+        'table'        => 'SuratPermintaanDirawat',
+        'namaemr'      => 'Surat Permintaan Dirawat',
+        'noregistrasi' => $noregistrasi,
+    );
 }
 ?>
 <style>
-.emr-card-wrap { max-height: 420px; overflow-y: auto; }
+.emr-wrap { font-size: 0.875rem; }
+.emr-card-wrap { max-height: 460px; overflow-y: auto; }
 .emr-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.65rem 0.5rem;
-    border-bottom: 1px solid #e5e7eb;
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.65rem 0.5rem; border-bottom: 1px solid #e5e7eb;
 }
 .emr-item:last-child { border-bottom: none; }
 .emr-item:hover { background: #f9fafb; }
 .emr-icon-box {
-    width: 42px; height: 42px;
-    border-radius: 12px;
+    width: 42px; height: 42px; border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-    font-size: 1rem;
+    flex-shrink: 0; font-size: 1rem;
 }
 .emr-meta { flex: 1; min-width: 0; }
 .emr-meta a.emr-title {
-    font-weight: 600;
-    color: #111827;
-    text-decoration: none;
-    display: block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-weight: 600; color: #111827; text-decoration: none; display: block;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.emr-meta a.emr-title:hover { color: #059669; }
-.emr-meta .emr-date { font-size: 0.75rem; color: #6b7280; display: block; margin: 2px 0 4px; }
+.emr-meta a.emr-title:hover { color: #059669; text-decoration: underline; }
+.emr-meta .emr-date { font-size: 0.72rem; color: #6b7280; display: block; margin: 2px 0 4px; }
 .emr-tag {
-    display: inline-block;
-    font-size: 0.65rem;
-    padding: 0.1rem 0.45rem;
-    border-radius: 9999px;
-    margin-right: 0.25rem;
-    margin-top: 0.15rem;
-    font-weight: 600;
+    display: inline-block; font-size: 0.65rem; padding: 0.1rem 0.45rem;
+    border-radius: 9999px; margin-right: 0.25rem; margin-top: 0.15rem; font-weight: 600;
 }
 .emr-tag-ruangan { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 .emr-tag-author  { background: #f3f4f6; color: #374151; }
 .emr-actions { display: flex; flex-direction: column; gap: 0.25rem; flex-shrink: 0; }
-.emr-actions a, .emr-actions button {
-    font-size: 0.7rem;
-    padding: 0.2rem 0.55rem;
-    border-radius: 0.35rem;
-    font-weight: 600;
-    text-decoration: none;
-    border: none;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    white-space: nowrap;
+.emr-actions a, .emr-actions span {
+    font-size: 0.7rem; padding: 0.2rem 0.55rem; border-radius: 0.35rem; font-weight: 600;
+    text-decoration: none; border: none; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 0.25rem; white-space: nowrap;
 }
 .emr-btn-lihat { background: #dbeafe; color: #1e40af; }
 .emr-btn-lihat:hover { background: #bfdbfe; }
 .emr-btn-cetak { background: #fef3c7; color: #92400e; }
 .emr-btn-cetak:hover { background: #fde68a; }
+.emr-btn-off { background: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
 .emr-search {
-    width: 100%;
-    border: 1px solid #d1d5db;
-    border-radius: 9999px;
-    padding: 0.4rem 0.9rem;
-    font-size: 0.8rem;
-    outline: none;
+    width: 100%; border: 1px solid #d1d5db; border-radius: 9999px;
+    padding: 0.4rem 0.9rem; font-size: 0.8rem; outline: none;
 }
 .emr-search:focus { border-color: #10b981; box-shadow: 0 0 0 2px rgba(16,185,129,.2); }
-.emr-quick-print { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 .emr-section-title {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #111827;
-    margin-bottom: 0.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
+    font-size: 0.95rem; font-weight: 700; color: #111827; margin-bottom: 0.5rem;
+    display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;
 }
 .emr-badge-count {
-    background: #10b981;
-    color: #fff;
-    font-size: 0.65rem;
-    padding: 0.1rem 0.45rem;
-    border-radius: 9999px;
-    font-weight: 700;
+    background: #10b981; color: #fff; font-size: 0.65rem; padding: 0.1rem 0.45rem;
+    border-radius: 9999px; font-weight: 700;
+}
+.emr-src { font-size: 0.65rem; font-weight: 400; color: #6b7280; }
+.emr-warn {
+    background: #fffbeb; border: 1px solid #fcd34d; color: #92400e;
+    border-radius: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.72rem; margin-bottom: 0.75rem;
+}
+.emr-warn code { background: #fef3c7; padding: 0 0.25rem; border-radius: 0.25rem; }
+.emr-debug {
+    background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem; font-size: 0.65rem; color: #334155; margin-top: 0.75rem;
+    white-space: pre-wrap; word-break: break-word; font-family: monospace;
 }
 </style>
 
-<div class="space-y-4">
-    <!-- Header card EMR (setara updates-header "EMR" di t-emr-detail.vue) -->
+<div class="emr-wrap space-y-3">
+    <!-- Header card EMR (setara updates-header "EMR" pada t-emr-detail.vue) -->
     <div>
         <div class="emr-section-title">
             <i class="fas fa-notes-medical text-emerald-600"></i>
             EMR
-            <span class="emr-badge-count"><?= count($listEmr) ?></span>
+            <span class="emr-badge-count"><?php echo count($listEmr); ?></span>
+            <span class="emr-src">sumber: <?php echo htmlspecialchars($sourceLabel); ?></span>
         </div>
+        <?php if (count($listEmr) > 0): ?>
         <input
             type="text"
             id="emrSearchInput"
             class="emr-search"
-            placeholder="Cari EMR..."
-            value="<?= htmlspecialchars($qSearch) ?>"
+            placeholder="Cari EMR (SPRI, CPPT, Resume Medis, MEOWS, ...)"
+            value="<?php echo htmlspecialchars($qSearch); ?>"
             autocomplete="off"
         >
+        <?php endif; ?>
     </div>
+
+    <?php if ($limited): ?>
+    <div class="emr-warn">
+        <b><i class="fas fa-exclamation-triangle"></i> Mode terbatas.</b>
+        Daftar EMR dibaca dari database SIMRS (emrpasien_t) karena sumber utama
+        (MongoDB <code>#ResumeEMR</code> / API <code>/emr/detail-pelayanan</code>)
+        tidak dapat diakses<?php echo $sourceError !== '' ? ': <code>' . htmlspecialchars($sourceError) . '</code>' : ''; ?>.
+        Nama form mengikuti referensi <code>emr_t</code> &amp; log EMR; dokumen yang tidak
+        ada log-nya tidak bisa dipastikan namanya.
+    </div>
+    <?php endif; ?>
 
     <!-- Daftar card EMR -->
     <?php if (empty($listEmr)): ?>
         <div class="text-center py-10">
             <i class="fas fa-folder-open text-4xl text-gray-300 mb-3"></i>
             <h3 class="text-base font-semibold text-gray-600">Belum ada data EMR</h3>
-            <p class="text-gray-400 text-xs mt-1">Pasien ini belum memiliki form EMR tersimpan.</p>
+            <p class="text-gray-400 text-xs mt-1">
+                Tidak ada dokumen EMR tersimpan untuk registrasi ini.
+                <?php if ($sourceError !== ''): ?>
+                <br><span class="text-amber-600">Info sumber data: <?php echo htmlspecialchars($sourceError); ?></span>
+                <?php endif; ?>
+            </p>
         </div>
     <?php else: ?>
         <div class="emr-card-wrap border rounded-lg bg-white" id="emrListContainer">
             <?php foreach ($listEmr as $idx => $item):
-                $colorKey = $listColor[$idx % count($listColor)];
-                $hex = $colorHex[$colorKey];
-                $emrFk = $item['emrpasienfk'];
-                $table = $item['table'] ?: 'SuratPermintaanDirawat';
-                $cetakUrl = buildCetakUrl($baseUrl, $table, $emrFk, $noregForLink, $userCetak, $kdProfile, $token);
-                $editUrl  = buildEditUrl(
-                    $baseUrl,
-                    $item['url_form'],
-                    $nocmfk ?: ($item['nocmfk'] ?? ''),
+                $colorKey  = $listColor[$idx % count($listColor)];
+                $hex       = $colorHex[$colorKey];
+                $emrFk     = $item['emrpasienfk'];
+                $noregItem = $item['noregistrasi'] !== '' ? $item['noregistrasi'] : $noregistrasi;
+                $editUrl   = emrBuildEditUrl(
+                    $webBase,
+                    $item['slug'],
+                    ($item['nocmfk'] !== '' ? $item['nocmfk'] : $nocmfk),
                     $norec_pd,
-                    $norec_apd ?: ($item['norec_apd'] ?? ''),
+                    ($item['norec_apd'] !== '' ? $item['norec_apd'] : $norec_apd),
                     $emrFk
                 );
-                $searchHay = mb_strtolower(
-                    $item['namaemr'] . ' ' . $item['author'] . ' ' . $item['ruangan'] . ' ' . $item['table']
-                );
+                $cetakUrl  = $item['table'] !== ''
+                    ? emrBuildCetakUrl($apiBase, $item['table'], $emrFk, $noregItem, $userCetak, $kdProfile, $tokenCetak)
+                    : '';
+                $searchHay = strtolower($item['namaemr'] . ' ' . $item['author'] . ' ' . $item['ruangan'] . ' ' . $item['table'] . ' ' . $item['noemr']);
             ?>
-            <div class="emr-item" data-search="<?= htmlspecialchars($searchHay) ?>">
-                <div class="emr-icon-box" style="background:<?= $hex['bg'] ?>;color:<?= $hex['fg'] ?>">
-                    <i class="<?= htmlspecialchars($item['icon']) ?>"></i>
+            <div class="emr-item" data-search="<?php echo htmlspecialchars($searchHay); ?>">
+                <div class="emr-icon-box" style="background:<?php echo $hex['bg']; ?>;color:<?php echo $hex['fg']; ?>">
+                    <i class="<?php echo htmlspecialchars($item['icon']); ?>"></i>
                 </div>
                 <div class="emr-meta">
-                    <a class="emr-title" href="<?= htmlspecialchars($editUrl) ?>" target="_blank" title="Lihat / ubah EMR">
-                        <?= htmlspecialchars($item['namaemr']) ?>
+                    <a class="emr-title" href="<?php echo htmlspecialchars($editUrl); ?>" target="_blank" title="Lihat / ubah EMR">
+                        <?php echo htmlspecialchars($item['namaemr']); ?>
                     </a>
                     <span class="emr-date">
-                        <i class="far fa-clock mr-1"></i><?= formatDateIndoSimple($item['last_update']) ?>
-                        <?php if (!empty($item['noemr'])): ?>
-                            · <span class="text-gray-400"><?= htmlspecialchars($item['noemr']) ?></span>
+                        <i class="far fa-clock mr-1"></i><?php echo emrTanggalIndoSimple($item['last_update']); ?>
+                        <?php if ($item['noemr'] !== ''): ?>
+                            · <span class="text-gray-400"><?php echo htmlspecialchars($item['noemr']); ?></span>
                         <?php endif; ?>
                     </span>
-                    <?php if (!empty($item['ruangan'])): ?>
-                        <span class="emr-tag emr-tag-ruangan"><?= htmlspecialchars($item['ruangan']) ?></span>
+                    <?php if ($item['ruangan'] !== ''): ?>
+                        <span class="emr-tag emr-tag-ruangan"><?php echo htmlspecialchars($item['ruangan']); ?></span>
                     <?php endif; ?>
-                    <span class="emr-tag emr-tag-author"><?= htmlspecialchars($item['author'] ?: '-') ?></span>
+                    <span class="emr-tag emr-tag-author"><?php echo htmlspecialchars($item['author'] !== '' ? $item['author'] : '-'); ?></span>
+                    <?php if ($item['table'] !== ''): ?>
+                        <span class="emr-tag" style="background:#f1f5f9;color:#475569;"><?php echo htmlspecialchars($item['table']); ?></span>
+                    <?php endif; ?>
                 </div>
                 <div class="emr-actions">
-                    <a class="emr-btn-lihat" href="<?= htmlspecialchars($editUrl) ?>" target="_blank" title="Lihat atau ubah data EMR">
+                    <a class="emr-btn-lihat" href="<?php echo htmlspecialchars($editUrl); ?>" target="_blank" title="Lihat atau ubah data EMR">
                         <i class="fas fa-eye"></i> Lihat
                     </a>
-                    <a class="emr-btn-cetak" href="<?= htmlspecialchars($cetakUrl) ?>" target="_blank" title="Cetak data EMR">
+                    <?php if ($cetakUrl !== ''): ?>
+                    <a class="emr-btn-cetak" href="<?php echo htmlspecialchars($cetakUrl); ?>" target="_blank" title="Cetak data EMR">
                         <i class="fas fa-print"></i> Cetak
                     </a>
+                    <?php else: ?>
+                    <span class="emr-btn-off" title="Collection cetak belum diketahui"><i class="fas fa-ban"></i> Cetak</span>
+                    <?php endif; ?>
                 </div>
             </div>
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
 
-    <!-- Tombol cetak cepat untuk form umum (SPRI / Rujukan / Resume) -->
+    <!-- Tombol cetak cepat (form umum) -->
     <?php
-    $quickShown = false;
     $quickHtml = '';
-    foreach ($quickPrintMap as $coll => $meta) {
-        $fk = null;
-        if (isset($latestByCollection[$coll])) {
-            $fk = $latestByCollection[$coll]['emrpasienfk'];
-        } elseif ($coll === 'SuratPermintaanDirawat' && $emr_surat_fk !== '') {
-            $fk = $emr_surat_fk;
+    foreach ($quickPrintMap as $key => $meta) {
+        if (!isset($latestByCollection[$key])) {
+            continue;
         }
-        // Cari case-insensitive
-        if (!$fk) {
-            foreach ($latestByCollection as $k => $v) {
-                if (strcasecmp($k, $coll) === 0) {
-                    $fk = $v['emrpasienfk'];
-                    break;
-                }
-            }
+        $it   = $latestByCollection[$key];
+        $fk   = $it['emrpasienfk'];
+        $nore = !empty($it['noregistrasi']) ? $it['noregistrasi'] : $noregistrasi;
+        if ($fk === '' || $nore === '') {
+            continue;
         }
-        if (!$fk) continue;
-        $quickShown = true;
-        $url = buildCetakUrl($baseUrl, $coll, $fk, $noregForLink, $userCetak, $kdProfile, $token);
+        $url = emrBuildCetakUrl($apiBase, $meta['collection'], $fk, $nore, $userCetak, $kdProfile, $tokenCetak);
         $quickHtml .= '<a href="' . htmlspecialchars($url) . '" target="_blank" '
             . 'class="inline-flex items-center gap-1 px-3 py-1.5 text-white rounded-lg text-xs font-semibold transition '
             . $meta['color'] . '">'
             . '<i class="' . $meta['icon'] . '"></i> ' . htmlspecialchars($meta['label'])
-            . '</a>';
+            . ' <span class="opacity-75">(' . htmlspecialchars($it['namaemr']) . ')</span></a>';
     }
-    if ($quickShown):
+    if ($quickHtml !== ''):
     ?>
     <div class="pt-2 border-t">
         <div class="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Cetak Cepat</div>
-        <div class="emr-quick-print">
-            <?= $quickHtml ?>
+        <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
+            <?php echo $quickHtml; ?>
         </div>
     </div>
     <?php endif; ?>
 
-    <p class="text-[10px] text-gray-400 text-right">sumber: <?= htmlspecialchars($source) ?></p>
+    <?php if ($showDebug): ?>
+    <div class="emr-debug">
+        <b>Diagnosa sumber data EMR</b>
+        <?php
+        echo "\n" . 'norec_pd     : ' . htmlspecialchars($norec_pd);
+        echo "\n" . 'noregistrasi : ' . htmlspecialchars($noregistrasi);
+        echo "\n" . 'hasil        : ' . htmlspecialchars($source) . ' (' . count($listEmr) . ' item)';
+        echo "\n" . 'catatan      : ' . htmlspecialchars($sourceError);
+        foreach ($diag as $d) {
+            echo "\n" . str_pad('[' . $d[0] . ']', 12) . ' ' . htmlspecialchars($d[1]);
+        }
+        ?>
+    </div>
+    <?php endif; ?>
+
+    <p class="text-[10px] text-gray-400 text-right">
+        sumber data: <?php echo htmlspecialchars($sourceLabel); ?>
+        <?php if ($sourceError !== ''): ?>
+            <br><span class="text-amber-600"><?php echo htmlspecialchars($sourceError); ?></span>
+        <?php endif; ?>
+    </p>
 </div>
 
 <script>
@@ -555,10 +1493,10 @@ if ($noregForLink === '' && !empty($listEmr[0]['noemr'])) {
     input.addEventListener('input', function () {
         var q = (input.value || '').toLowerCase().trim();
         var items = list.querySelectorAll('.emr-item');
-        items.forEach(function (el) {
-            var hay = el.getAttribute('data-search') || '';
-            el.style.display = (!q || hay.indexOf(q) !== -1) ? '' : 'none';
-        });
+        for (var i = 0; i < items.length; i++) {
+            var hay = items[i].getAttribute('data-search') || '';
+            items[i].style.display = (!q || hay.indexOf(q) !== -1) ? '' : 'none';
+        }
     });
 })();
 </script>

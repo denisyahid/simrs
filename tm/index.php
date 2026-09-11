@@ -24,6 +24,20 @@ $userCetak = 'Pasa Pirdaos, A.Md.A.K';
 $kdProfile = 1;
 
 // ============================================================
+// TOKEN DARI URL (opsional)
+// Bila token di bawah sudah kadaluarsa, token baru bisa "disuntik" lewat URL:
+//     tm/index.php?...&token=<token-baru>
+// Token ini dipakai untuk link Cetak / Billing / Rujukan dan juga dikirim ke
+// modal EMR (ajax_emr_detail.php) supaya daftar EMR ikut terbarui.
+// ============================================================
+$tokenFromUrl = '';
+if (!empty($_GET['token'])) {
+    // tanda "+" pada token base64 bisa berubah jadi spasi saat lewat URL
+    $tokenFromUrl = str_replace(' ', '+', trim($_GET['token']));
+    $token       = $tokenFromUrl;
+}
+
+// ============================================================
 // COLLECT KLAIM (Generate PDF via Bridging)
 // ============================================================
 if (isset($_GET['action']) && $_GET['action'] === 'collect_klaim' && !empty($_GET['noregistrasi'])) {
@@ -779,6 +793,16 @@ $resetUrl = '?' . $resetQuery;
                     <span class="ml-2 text-gray-500">Memuat data...</span>
                 </div>
             </div>
+            <div class="flex justify-between items-center border-t pt-2 mt-3 gap-2">
+                <span class="text-[11px] text-gray-400">
+                    Klik <b>Lihat</b> untuk membuka / mengubah form di aplikasi EMR.
+                    Bila daftar kosong / kadaluarsa: buka halaman ini dengan
+                    <code class="bg-gray-100 px-1 rounded">?token=&lt;token-baru&gt;</code>
+                </span>
+                <button id="reloadEmrModal" class="btn-emr" type="button" title="Muat ulang daftar EMR">
+                    <i class="fas fa-sync-alt"></i> Muat ulang
+                </button>
+            </div>
         </div>
     </div>
     <!-- Modal Bundle (AJAX) -->
@@ -1272,13 +1296,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    document.body.addEventListener('click', function(e) {
-        const btn = e.target.closest('.btn-emr-modal');
-        if (!btn) return;
+    // Tombol EMR yang terakhir diklik (untuk tombol "Muat ulang" di modal)
+    let emrLastBtn = null;
 
-        e.preventDefault();
-        e.stopPropagation();
-
+    function loadEmrModal(btn) {
+        emrLastBtn = btn;
         // data-* dibaca lewat dataset (nilai sudah di-decode HTML entity)
         const norecPd = btn.dataset.norec_pd || '';
         const noregistrasi = btn.dataset.noregistrasi || '';
@@ -1287,7 +1309,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const emrSuratFk = btn.dataset.emr_surat_fk || '';
         const nama = btn.dataset.nama || noregistrasi;
 
-        emrModal.classList.remove('hidden');
         emrNoreg.textContent = nama ? (noregistrasi + ' · ' + nama) : noregistrasi;
         emrContent.innerHTML = `<div class="flex justify-center items-center py-8">
             <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
@@ -1300,6 +1321,9 @@ document.addEventListener('DOMContentLoaded', function() {
         params.set('nocmfk', nocmfk);
         params.set('norec_apd', norecApd);
         if (emrSuratFk) params.set('emr_surat_fk', emrSuratFk);
+        // token terbaru dari URL (bila ada) supaya daftar EMR ikut terbarui
+        const emrToken = <?= json_encode($tokenFromUrl); ?>;
+        if (emrToken) params.set('token', emrToken);
 
         fetch('ajax_emr_detail.php?' + params.toString())
             .then(response => {
@@ -1323,7 +1347,25 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => {
                 emrContent.innerHTML = `<p class="text-red-500 text-center py-4">Gagal memuat data EMR: ${error.message}</p>`;
             });
+    }
+
+    document.body.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-emr-modal');
+        if (!btn) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        emrModal.classList.remove('hidden');
+        loadEmrModal(btn);
     });
+
+    const reloadEmrBtn = document.getElementById('reloadEmrModal');
+    if (reloadEmrBtn) {
+        reloadEmrBtn.addEventListener('click', function() {
+            if (emrLastBtn) loadEmrModal(emrLastBtn);
+        });
+    }
 
     // === Bundle Modal ===
     const bundleModal = document.getElementById('bundleModal');
