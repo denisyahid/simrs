@@ -737,47 +737,10 @@ $resetUrl = '?' . $resetQuery;
     </style>
 </head>
 <body class="bg-gray-100 p-4">
-    <!-- Modal Radiologi (AJAX) -->
-    <div id="radiologiModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden print-hide">
-        <div class="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-lg bg-white">
-            <div class="flex justify-between items-center border-b pb-2 mb-3">
-                <h3 class="text-lg font-semibold text-gray-800">
-                    Detail Radiologi - <span id="radiologiNoreg"></span>
-                </h3>
-                <button id="closeRadiologiModal" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div id="radiologiContent" class="text-sm">
-                <div class="flex justify-center items-center py-8">
-                    <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
-                    <span class="ml-2 text-gray-500">Memuat data...</span>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Modal Laboratorium (AJAX) -->
-    <div id="laboratoriumModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden print-hide">
-        <div class="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-lg bg-white">
-            <div class="flex justify-between items-center border-b pb-2 mb-3">
-                <h3 class="text-lg font-semibold text-gray-800">
-                    Detail Laboratorium - <span id="laboratoriumNoreg"></span>
-                </h3>
-                <button id="closeLaboratoriumModal" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div id="laboratoriumContent" class="text-sm">
-                <div class="flex justify-center items-center py-8">
-                    <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
-                    <span class="ml-2 text-gray-500">Memuat data...</span>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Radiologi & Laboratorium standalone dihapus — sekarang terintegrasi di modal EMR (ajax_emr_detail.php) -->
     <!-- Modal EMR (AJAX) — card LIST_EMR native PHP (port dari frontend Vue t-emr-detail) -->
     <div id="emrModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden print-hide">
-        <div class="relative top-4 mx-auto p-4 border w-full max-w-5xl shadow-lg rounded-lg bg-white mb-8">
+        <div class="relative top-4 mx-auto p-3 border w-full max-w-6xl shadow-lg rounded-lg bg-white mb-8">
             <div class="flex justify-between items-center border-b pb-2 mb-3 gap-3">
                 <h3 class="text-base font-semibold text-gray-800 truncate">
                     <i class="fas fa-notes-medical text-emerald-600 mr-1"></i>
@@ -1018,9 +981,6 @@ $resetUrl = '?' . $resetQuery;
                     <th class="text-xs px-1 py-1">Ruang Akhir</th>
                     <th class="text-xs px-1 py-1">Cara Bayar</th>
                     <th class="text-xs px-1 py-1">No SEP</th>
-                    <th class="text-xs px-1 py-1 print-hide">Radiologi</th>
-                    <th class="text-xs px-1 py-1 print-hide">Laboratorium</th>
-                    <th class="text-xs px-1 py-1 print-hide">Bill</th>
                     <th class="text-xs px-1 py-1 print-hide">Aksi</th>
                 </tr>
             </thead>
@@ -1028,7 +988,7 @@ $resetUrl = '?' . $resetQuery;
                 <?php if (empty($data)): ?>
                     <tr
     class="hover:bg-gray-200 transition-all cursor-pointer patient-row"
-    data-nosep="<?= htmlspecialchars($row['nosep']) ?>"><td colspan="14" class="text-center py-4 text-gray-500">❌ Tidak ada data</td></tr>
+    data-nosep="<?= htmlspecialchars($row['nosep']) ?>"><td colspan="10" class="text-center py-4 text-gray-500">❌ Tidak ada data</td></tr>
                 <?php else: ?>
                     <?php $NO = 1; foreach ($data as $row): ?>
                         <?php 
@@ -1071,34 +1031,8 @@ $resetUrl = '?' . $resetQuery;
                                 ?>
                             </td>
                             <td class="border text-xs px-1 py-0.5"><?= htmlspecialchars($row['nosep'] ?? '-') ?></td>
-                            <td class="border text-xs px-1 py-0.5 print-hide text-center">
-                                 <!-- Radiologi (hanya jika ada) -->
-                                <?php if ($hasRadiologi): ?>
-                                    <button class="btn-radiologi btn-radiologi-modal"
-        data-norec_pd="<?= urlencode($norec_pd) ?>"
-        data-noregistrasi="<?= urlencode($row['noregistrasi']) ?>"
-        data-nama="<?= htmlspecialchars($row['namapasien']) ?>">
-    <i class="fas fa-x-ray"></i> Rad
-</button>
-                                <?php endif; ?>
-                            </td>
-                          
-                            <td class="border text-xs px-1 py-0.5 print-hide text-center">
-                                <!-- Laboratorium (hanya jika ada) -->
-                                <?php if ($row['has_laboratorium']): ?>
-                                  <button class="btn-laboratorium btn-laboratorium-modal"
-                                            data-norec_pd="<?= urlencode($norec_pd) ?>"
-                                            data-noregistrasi="<?= urlencode($row['noregistrasi']) ?>"
-                                            data-nama="<?= htmlspecialchars($row['namapasien']) ?>">
-                                        <i class="fas fa-flask"></i> Lab
-                                    </button>
-                                <?php endif; ?>
-                            </td>
-                              <td class="border text-xs px-1 py-0.5 print-hide text-center">
-                                <a href="http://192.168.22.81<?= $linkBilling ?>" target="_blank" class="btn-billing">
-                                    <i class="fas fa-file-invoice-dollar"></i> Billing
-                                </a>
-                            </td>
+
+
                             <td class="border flex justify-content-between text-xs px-1 py-0.5 print-hide text-center gap-1">
                                 <!-- Tombol EMR → modal card LIST_EMR (ajax_emr_detail.php native) -->
                                 <button type="button"
@@ -1155,54 +1089,6 @@ document.addEventListener('DOMContentLoaded', function() {
     closeFilterBtn.addEventListener('click', () => { filterModal.classList.add('hidden'); });
     window.addEventListener('click', (e) => { if (e.target === filterModal) filterModal.classList.add('hidden'); });
 
-    // === Radiologi Modal ===
-    const radiologiModal = document.getElementById('radiologiModal');
-    const radiologiContent = document.getElementById('radiologiContent');
-    const radiologiNoreg = document.getElementById('radiologiNoreg');
-    const closeRadiologiBtn = document.getElementById('closeRadiologiModal');
-
-    function closeRadiologiModal() {
-        radiologiModal.classList.add('hidden');
-        radiologiContent.innerHTML = `<div class="flex justify-center items-center py-8">
-            <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
-            <span class="ml-2 text-gray-500">Memuat data...</span>
-        </div>`;
-    }
-
-    closeRadiologiBtn.addEventListener('click', closeRadiologiModal);
-    window.addEventListener('click', function(e) {
-        if (e.target === radiologiModal) closeRadiologiModal();
-    });
-
-    document.body.addEventListener('click', function(e) {
-        const btn = e.target.closest('.btn-radiologi-modal');
-        if (!btn) return;
-
-        e.preventDefault();
-        const norecPd = btn.dataset.norec_pd;
-        const noregistrasi = btn.dataset.noregistrasi;
-        const nama = btn.dataset.nama || noregistrasi;
-
-        radiologiModal.classList.remove('hidden');
-        radiologiNoreg.textContent = noregistrasi;
-        radiologiContent.innerHTML = `<div class="flex justify-center items-center py-8">
-            <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
-            <span class="ml-2 text-gray-500">Memuat data...</span>
-        </div>`;
-
-        fetch(`ajax_radiologi_detail.php?norec_pd=${encodeURIComponent(norecPd)}&noregistrasi=${encodeURIComponent(noregistrasi)}`)
-            .then(response => {
-                if (!response.ok) throw new Error('Gagal memuat');
-                return response.text();
-            })
-            .then(html => {
-                radiologiContent.innerHTML = html;
-            })
-            .catch(error => {
-                radiologiContent.innerHTML = `<p class="text-red-500 text-center py-4">Gagal memuat data radiologi: ${error.message}</p>`;
-            });
-    });
-
     window.showExpertise = function(text) {
         const expertiseModal = document.createElement('div');
         expertiseModal.className = 'fixed inset-0 bg-black bg-opacity-50 z-[60] flex justify-center items-center';
@@ -1221,55 +1107,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
 
-    // === Laboratorium Modal ===
-    const laboratoriumModal = document.getElementById('laboratoriumModal');
-    const laboratoriumContent = document.getElementById('laboratoriumContent');
-    const laboratoriumNoreg = document.getElementById('laboratoriumNoreg');
-    const closeLaboratoriumBtn = document.getElementById('closeLaboratoriumModal');
-
-    function closeLaboratoriumModal() {
-        laboratoriumModal.classList.add('hidden');
-        laboratoriumContent.innerHTML = `<div class="flex justify-center items-center py-8">
-            <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
-            <span class="ml-2 text-gray-500">Memuat data...</span>
-        </div>`;
-    }
-
-    closeLaboratoriumBtn.addEventListener('click', closeLaboratoriumModal);
-    window.addEventListener('click', function(e) {
-        if (e.target === laboratoriumModal) closeLaboratoriumModal();
-    });
-
-    document.body.addEventListener('click', function(e) {
-        const btn = e.target.closest('.btn-laboratorium-modal');
-        if (!btn) return;
-
-        e.preventDefault();
-        const norecPd = btn.dataset.norec_pd;
-        const noregistrasi = btn.dataset.noregistrasi;
-        const nama = btn.dataset.nama || noregistrasi;
-
-        laboratoriumModal.classList.remove('hidden');
-        laboratoriumNoreg.textContent = noregistrasi;
-        laboratoriumContent.innerHTML = `<div class="flex justify-center items-center py-8">
-            <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
-            <span class="ml-2 text-gray-500">Memuat data...</span>
-        </div>`;
-
-        fetch(`ajax_laboratorium_detail.php?norec_pd=${encodeURIComponent(norecPd)}&noregistrasi=${encodeURIComponent(noregistrasi)}`)
-            .then(response => {
-                if (!response.ok) throw new Error('Gagal memuat');
-                return response.text();
-            })
-            .then(html => {
-                laboratoriumContent.innerHTML = html;
-            })
-            .catch(error => {
-                laboratoriumContent.innerHTML = `<p class="text-red-500 text-center py-4">Gagal memuat data laboratorium: ${error.message}</p>`;
-            });
-    });
-
-    // === EMR Modal (card LIST_EMR native PHP — ajax_emr_detail.php) ===
+        // === EMR Modal (card LIST_EMR native PHP — ajax_emr_detail.php) ===
     const emrModal = document.getElementById('emrModal');
     const emrContent = document.getElementById('emrContent');
     const emrNoreg = document.getElementById('emrNoreg');
