@@ -794,11 +794,7 @@ $resetUrl = '?' . $resetQuery;
                 </div>
             </div>
             <div class="flex justify-between items-center border-t pt-2 mt-3 gap-2">
-                <span class="text-[11px] text-gray-400">
-                    Klik <b>Lihat</b> untuk membuka / mengubah form di aplikasi EMR.
-                    Bila daftar kosong / kadaluarsa: buka halaman ini dengan
-                    <code class="bg-gray-100 px-1 rounded">?token=&lt;token-baru&gt;</code>
-                </span>
+              
                 <button id="reloadEmrModal" class="btn-emr" type="button" title="Muat ulang daftar EMR">
                     <i class="fas fa-sync-alt"></i> Muat ulang
                 </button>
@@ -1114,9 +1110,7 @@ $resetUrl = '?' . $resetQuery;
                                     <i class="fas fa-stethoscope"></i> EMR
                                 </button>
                                 <!-- Buka form TM (Surat Permintaan Dirawat) di frontend Vue -->
-                                <a href="<?= $linkEmr ?>" target="_blank" class="btn-emr" title="Buka form Surat Permintaan Dirawat">
-                                    <i class="fas fa-user"></i> TM
-                                </a>
+                              
                             </td>
                         </tr>
                     <?php endforeach; ?>

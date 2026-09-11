@@ -1241,6 +1241,7 @@ $colorHex  = array(
 // cetak cepat (collection -> label tombol)
 $quickPrintMap = array(
     'suratpermintaandirawat' => array('collection' => 'SuratPermintaanDirawat',  'label' => 'Cetak SPRI',            'color' => 'bg-green-600 hover:bg-green-700',     'icon' => 'fas fa-file-medical-alt'),
+    'laporanOperasi' => array('collection' => 'LaporanOperasi',  'label' => 'Cetak Laporan Operasi',            'color' => 'bg-green-600 hover:bg-green-700',     'icon' => 'fas fa-file-medical-alt'),
     'rujukanpasien'          => array('collection' => 'RujukanPasien',           'label' => 'Cetak Rujukan Manual',  'color' => 'bg-red-600 hover:bg-red-700',         'icon' => 'fas fa-print'),
     'resumemedis'            => array('collection' => 'resumeMedis',             'label' => 'Cetak Resume Medis',    'color' => 'bg-emerald-600 hover:bg-emerald-700', 'icon' => 'fas fa-notes-medical'),
     'ringkasankeluar'        => array('collection' => 'RingkasanKeluar',         'label' => 'Cetak Ringkasan Pulang','color' => 'bg-indigo-600 hover:bg-indigo-700',   'icon' => 'fas fa-file-alt'),
@@ -1333,10 +1334,9 @@ if ($emr_surat_fk !== '' && !isset($latestByCollection['suratpermintaandirawat']
     <!-- Header card EMR (setara updates-header "EMR" pada t-emr-detail.vue) -->
     <div>
         <div class="emr-section-title">
-            <i class="fas fa-notes-medical text-emerald-600"></i>
-            EMR
+          
             <span class="emr-badge-count"><?php echo count($listEmr); ?></span>
-            <span class="emr-src">sumber: <?php echo htmlspecialchars($sourceLabel); ?></span>
+           
         </div>
         <?php if (count($listEmr) > 0): ?>
         <input
@@ -1351,14 +1351,14 @@ if ($emr_surat_fk !== '' && !isset($latestByCollection['suratpermintaandirawat']
     </div>
 
     <?php if ($limited): ?>
-    <div class="emr-warn">
+    <!-- <div class="emr-warn">
         <b><i class="fas fa-exclamation-triangle"></i> Mode terbatas.</b>
         Daftar EMR dibaca dari database SIMRS (emrpasien_t) karena sumber utama
         (MongoDB <code>#ResumeEMR</code> / API <code>/emr/detail-pelayanan</code>)
         tidak dapat diakses<?php echo $sourceError !== '' ? ': <code>' . htmlspecialchars($sourceError) . '</code>' : ''; ?>.
         Nama form mengikuti referensi <code>emr_t</code> &amp; log EMR; dokumen yang tidak
         ada log-nya tidak bisa dipastikan namanya.
-    </div>
+    </div> -->
     <?php endif; ?>
 
     <!-- Daftar card EMR -->
@@ -1419,7 +1419,11 @@ if ($emr_surat_fk !== '' && !isset($latestByCollection['suratpermintaandirawat']
                     <a class="emr-btn-lihat" href="<?php echo htmlspecialchars($editUrl); ?>" target="_blank" title="Lihat atau ubah data EMR">
                         <i class="fas fa-eye"></i> Lihat
                     </a>
-                    <?php if ($cetakUrl !== ''): ?>
+                    <?php if ($cetakUrl !== ''): $cetakUrl = str_replace(
+    'http://localhost',
+    'http://192.168.22.81',
+    $cetakUrl
+); ?>
                     <a class="emr-btn-cetak" href="<?php echo htmlspecialchars($cetakUrl); ?>" target="_blank" title="Cetak data EMR">
                         <i class="fas fa-print"></i> Cetak
                     </a>
