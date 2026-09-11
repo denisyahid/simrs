@@ -1271,65 +1271,286 @@ foreach ($quickPrintMap as $key => $meta) {
         . 'title="' . htmlspecialchars($meta['full']) . '" class="qp-btn">'
         . '<i class="fas fa-print"></i> ' . htmlspecialchars($meta['label']) . '</a>';
 }
+
+// ============================================================
+// AMBIL DATA LABORATORIUM & RADIOLOGI (untuk panel kiri modal EMR)
+// ============================================================
+$labOrders = array();
+$radOrders = array();
+if ($pdo && $norec_pd !== '') {
+    // --- Laboratorium ---
+    try {
+        $sqlLab = "
+            SELECT 
+                so.norec AS norec_so,
+                so.norec_apd,
+                so.noorder,
+                so.tglorder,
+                so.objectruangantujuanfk,
+                so.statusorder,
+                so.noregistrasi,
+                ru.namaruangan AS ruangan_tujuan,
+                ruasal.namaruangan AS ruangan_asal,
+                pg_order.namalengkap AS dokter_order,
+                pr.namaproduk,
+                pr.id AS produk_id
+            FROM strukorder_t so
+            JOIN ruangan_m ru ON ru.id = so.objectruangantujuanfk
+            LEFT JOIN ruangan_m ruasal ON ruasal.id = so.objectruanganfk
+            LEFT JOIN pegawai_m pg_order ON pg_order.id = so.objectpegawaiorderfk
+            LEFT JOIN pelayananpasien_t pp ON pp.strukorderfk = so.norec AND pp.statusenabled = true
+            LEFT JOIN produk_m pr ON pr.id = pp.produkfk
+            WHERE so.noregistrasifk = :norec_pd
+              AND so.keteranganorder = 'Order Laboratorium'
+              AND so.statusenabled = true
+            ORDER BY so.tglorder DESC
+        ";
+        $stmtLab = $pdo->prepare($sqlLab);
+        $stmtLab->execute(array(':norec_pd' => $norec_pd));
+        $rawLab = $stmtLab->fetchAll();
+        $tmp = array();
+        foreach ($rawLab as $row) {
+            $key = $row['norec_so'];
+            if (!isset($tmp[$key])) {
+                $tmp[$key] = array(
+                    'norec_so' => $row['norec_so'],
+                    'noorder' => $row['noorder'],
+                    'tglorder' => $row['tglorder'] ? date('d-m-Y H:i', strtotime($row['tglorder'])) : '-',
+                    'ruanganasal' => $row['ruangan_asal'] ?? '-',
+                    'ruangantujuan' => $row['ruangan_tujuan'] ?? '-',
+                    'dokter' => $row['dokter_order'] ?? '-',
+                    'status' => $row['statusorder'] == 2 ? 'selesai' : ($row['statusorder']==1?'verifikasi':'pending'),
+                    'noregistrasi' => $row['noregistrasi'],
+                    'norec_apd' => $row['norec_apd'] ?? '',
+                    'details' => array(),
+                    'product_ids' => array(),
+                );
+            }
+            if (!empty($row['namaproduk']) && !in_array($row['produk_id'], $tmp[$key]['product_ids'])) {
+                $tmp[$key]['details'][] = array('namaproduk'=>$row['namaproduk'],'produk_id'=>$row['produk_id']);
+                $tmp[$key]['product_ids'][] = $row['produk_id'];
+            }
+        }
+        $labOrders = array_values($tmp);
+    } catch (Exception $e) {
+        $diag[] = array('lab','gagal: '.$e->getMessage());
+    }
+
+    // --- Radiologi ---
+    try {
+        $sqlRad = "
+            SELECT 
+                so.norec AS norec_so,
+                so.noorder,
+                so.tglorder,
+                so.objectruangantujuanfk,
+                so.statusorder,
+                so.noregistrasi,
+                ru.namaruangan AS ruangan_tujuan,
+                ruasal.namaruangan AS ruangan_asal,
+                pg_order.namalengkap AS dokter_order,
+                pg_baca.namalengkap AS dokter_baca,
+                pr.namaproduk,
+                pr.id AS produk_id,
+                hr.keterangan AS expertise,
+                hr.norec AS norec_exper,
+                pp.norec AS norec_pp
+            FROM strukorder_t so
+            JOIN ruangan_m ru ON ru.id = so.objectruangantujuanfk
+            LEFT JOIN ruangan_m ruasal ON ruasal.id = so.objectruanganfk
+            LEFT JOIN pegawai_m pg_order ON pg_order.id = so.objectpegawaiorderfk
+            LEFT JOIN pelayananpasien_t pp ON pp.strukorderfk = so.norec AND pp.statusenabled = true
+            LEFT JOIN produk_m pr ON pr.id = pp.produkfk
+            LEFT JOIN hasilradiologi_t hr ON hr.pelayananpasienfk = pp.norec AND hr.statusenabled = true
+            LEFT JOIN pegawai_m pg_baca ON pg_baca.id = hr.pegawaifk
+            WHERE so.noregistrasifk = :norec_pd
+              AND so.keteranganorder = 'Order Radiologi'
+              AND so.statusenabled = true
+            ORDER BY so.tglorder DESC
+        ";
+        $stmtRad = $pdo->prepare($sqlRad);
+        $stmtRad->execute(array(':norec_pd' => $norec_pd));
+        $rawRad = $stmtRad->fetchAll();
+        $tmpR = array();
+        foreach ($rawRad as $row) {
+            $key = $row['norec_so'];
+            if (!isset($tmpR[$key])) {
+                $tmpR[$key] = array(
+                    'norec_so' => $row['norec_so'],
+                    'noorder' => $row['noorder'],
+                    'tglorder' => $row['tglorder'] ? date('d-m-Y H:i', strtotime($row['tglorder'])) : '-',
+                    'ruanganasal' => $row['ruangan_asal'] ?? '-',
+                    'ruangantujuan' => $row['ruangan_tujuan'] ?? '-',
+                    'dokter' => $row['dokter_order'] ?? '-',
+                    'dokterbaca' => $row['dokter_baca'] ?? '-',
+                    'status' => $row['statusorder'] == 2 ? 'selesai' : ($row['statusorder']==1?'verifikasi':'pending'),
+                    'noregistrasi' => $row['noregistrasi'],
+                    'expertise' => $row['expertise'] ?? '',
+                    'norec_exper' => $row['norec_exper'] ?? '',
+                    'details' => array(),
+                );
+            }
+            if (!empty($row['namaproduk'])) {
+                $exists = false;
+                foreach ($tmpR[$key]['details'] as $d) { if ($d['produk_id']==$row['produk_id']) { $exists=true; break; } }
+                if (!$exists) {
+                    $tmpR[$key]['details'][] = array('namaproduk'=>$row['namaproduk'],'produk_id'=>$row['produk_id'],'norec_exper'=>$row['norec_exper'],'norec_pp'=>$row['norec_pp']);
+                    if (!empty($row['expertise']) && empty($tmpR[$key]['expertise'])) $tmpR[$key]['expertise']=$row['expertise'];
+                    if (!empty($row['norec_exper']) && empty($tmpR[$key]['norec_exper'])) $tmpR[$key]['norec_exper']=$row['norec_exper'];
+                }
+            }
+        }
+        $radOrders = array_values($tmpR);
+    } catch (Exception $e) {
+        $diag[] = array('rad','gagal: '.$e->getMessage());
+    }
+}
+
+// Billing link untuk Cetak Cepat (opsional, bila noregistrasi ada)
+$billingUrl = '';
+if ($noregistrasi !== '') {
+    $bangsaVal = 'WNI';
+    if ($pdo) {
+        try {
+            $stmtBg = $pdo->prepare("SELECT kb.name AS bangsa FROM pasiendaftar_t pd JOIN pasien_m ps ON ps.id=pd.nocmfk LEFT JOIN kebangsaan_m kb ON kb.id=ps.objectkebangsaanfk WHERE pd.norec=:norec LIMIT 1");
+            $stmtBg->execute(array(':norec'=>$norec_pd));
+            $bgRow = $stmtBg->fetch();
+            if ($bgRow && !empty($bgRow['bangsa'])) $bangsaVal = $bgRow['bangsa'];
+        } catch (Exception $e) {}
+    }
+    $billingUrl = '/service/kasir/billing/report/rincian-biaya?noregistrasi='.urlencode($noregistrasi).'&bangsa='.urlencode($bangsaVal).'&user='.urlencode($userCetak).'&kdprofile='.$kdProfile.'&token='.urlencode($tokenCetak);
+    $billingUrl = 'http://192.168.22.81'.$billingUrl;
+}
+if ($billingUrl !== '') {
+    $billingBtn = '<a href="'.htmlspecialchars($billingUrl).'" target="_blank" title="Rincian Biaya / Billing" class="qp-btn qp-btn-billing"><i class="fas fa-file-invoice-dollar"></i> Billing</a>';
+    $quickHtml .= $billingBtn;
+}
+
 ?>
 <style>
 .emr-wrap { font-size: 0.875rem; }
+/* Grid 50/50 */
+.emr-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    align-items: start;
+}
+@media (max-width: 900px) {
+    .emr-grid { grid-template-columns: 1fr; }
+}
+.emr-col { display:flex; flex-direction:column; gap:0.6rem; min-width:0; }
 
-/* ---- Cetak Cepat (baris tombol di atas modal) ---- */
+/* Panel umum */
+.emr-panel {
+    border: 1px solid #f3f4f6;
+    border-radius: 0.6rem;
+    background: #fff;
+    overflow: hidden;
+}
+.emr-panel-head {
+    display:flex; align-items:center; gap:0.4rem;
+    padding: 0.5rem 0.65rem;
+    background: #f9fafb;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:#6b7280;
+}
+.emr-panel-head i { font-size:0.75rem; }
+.emr-panel-body { padding:0.55rem; }
+.emr-panel-body.scroll { max-height: 260px; overflow-y:auto; }
+.emr-panel-body.scroll-sm { max-height: 220px; overflow-y:auto; }
+
+/* Cetak Cepat */
 .qp-wrap {
-    display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem;
-    background: #f9fafb; border: 1px solid #f3f4f6; border-radius: 0.5rem;
-    padding: 0.5rem 0.65rem; margin-bottom: 0.6rem;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem;
 }
 .qp-label {
-    font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+    font-size: 0.60rem; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.05em; color: #9ca3af; margin-right: 0.15rem;
 }
 .qp-btn {
-    display: inline-flex; align-items: center; gap: 0.35rem;
-    padding: 0.35rem 0.8rem; font-size: 0.75rem; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    padding: 0.32rem 0.7rem; font-size: 0.72rem; font-weight: 600;
     color: #374151; background: #ffffff; border: 1px solid #d1d5db;
     border-radius: 0.5rem; text-decoration: none; transition: all .15s ease;
-    white-space: nowrap;
+    white-space: nowrap; line-height:1;
 }
-.qp-btn i { color: #10b981; font-size: 0.7rem; }
+.qp-btn i { color: #10b981; font-size: 0.68rem; }
 .qp-btn:hover { border-color: #10b981; color: #047857; background: #ecfdf5; }
+.qp-btn-billing i { color:#f59e0b; }
+.qp-btn-billing:hover { border-color:#f59e0b; background:#fffbeb; color:#b45309; }
 
-/* ---- Baris atas: jumlah dokumen + pencarian ---- */
-.emr-top { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
-.emr-badge-count {
-    background: #10b981; color: #fff; font-size: 0.68rem; padding: 0.25rem 0.6rem;
-    border-radius: 9999px; font-weight: 700; flex-shrink: 0;
+/* Lab / Radiologi item di panel kiri */
+.mini-order {
+    border: 1px solid #f3f4f6; border-left:3px solid #e5e7eb;
+    border-radius:0.5rem; padding:0.5rem 0.55rem; background:#fff; margin-bottom:0.45rem;
+}
+.mini-order:last-child{margin-bottom:0}
+.mini-order.lab { border-left-color:#38bdf8; }
+.mini-order.rad { border-left-color:#a78bfa; }
+.mini-order-head { display:flex; flex-wrap:wrap; align-items:center; gap:0.35rem; font-size:0.72rem; font-weight:600; color:#111827; }
+.mini-order-head .badge {
+    font-size:0.60rem; font-weight:700; padding:0.15rem 0.4rem; border-radius:9999px; text-transform:uppercase;
+}
+.badge-selesai { background:#dcfce7; color:#166534; }
+.badge-verifikasi { background:#dbeafe; color:#1e40af; }
+.badge-pending { background:#fef3c7; color:#92400e; }
+.mini-order-meta { font-size:0.68rem; color:#6b7280; margin-top:0.25rem; line-height:1.3; }
+.mini-order-produk { margin-top:0.3rem; }
+.mini-order-produk li { font-size:0.70rem; color:#374151; display:flex; gap:0.25rem; align-items:center; }
+.mini-order-actions { display:flex; gap:0.3rem; margin-top:0.4rem; flex-wrap:wrap; }
+.mini-btn {
+    display:inline-flex; align-items:center; gap:0.25rem;
+    padding:0.22rem 0.55rem; border-radius:9999px; font-size:0.68rem; font-weight:600; text-decoration:none; border:1px solid transparent;
+}
+.mini-btn-cetak { background:#f59e0b; color:#fff; }
+.mini-btn-cetak:hover { background:#d97706; }
+.mini-btn-hasil { background:#10b981; color:#fff; }
+.mini-btn-hasil:hover { background:#059669; }
+.mini-btn-off { background:#f3f4f6; color:#9ca3af; border-color:#e5e7eb; cursor:not-allowed; }
+.mini-empty { text-align:center; padding:1.2rem 0.5rem; color:#9ca3af; font-size:0.75rem; }
+.mini-empty i { font-size:1.2rem; display:block; margin-bottom:0.3rem; }
+
+/* Kanan: Pencarian EMR minimal */
+.emr-search-wrap {
+    display:flex; align-items:center; gap:0.4rem;
+    background:#f9fafb; border:1px solid #f3f4f6; border-radius:0.6rem;
+    padding:0.4rem 0.5rem;
+}
+.emr-search-wrap .count {
+    background:#10b981; color:#fff; font-size:0.65rem; font-weight:700;
+    padding:0.2rem 0.45rem; border-radius:9999px; flex-shrink:0;
 }
 .emr-search {
-    width: 100%; border: 1px solid #d1d5db; border-radius: 9999px;
-    padding: 0.4rem 0.9rem; font-size: 0.8rem; outline: none;
+    flex:1; border:none; background:transparent;
+    font-size:0.75rem; outline:none; color:#111827; min-width:0;
 }
-.emr-search:focus { border-color: #10b981; box-shadow: 0 0 0 2px rgba(16,185,129,.2); }
+.emr-search::placeholder{color:#9ca3af}
+.emr-search:focus{ outline:none; }
 
-/* ---- Daftar EMR (baris minimal) ---- */
-.emr-card-wrap { max-height: 65vh; overflow-y: auto; border: 1px solid #f3f4f6; border-radius: 0.5rem; background: #fff; }
+/* Daftar EMR di kanan — minimal */
+.emr-card-wrap { max-height: 62vh; overflow-y: auto; border: 1px solid #f3f4f6; border-radius: 0.6rem; background: #fff; }
 .emr-item {
-    display: flex; align-items: center; gap: 0.7rem;
-    padding: 0.5rem 0.75rem; border-bottom: 1px solid #f3f4f6;
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.45rem 0.6rem; border-bottom: 1px solid #f3f4f6;
 }
 .emr-item:last-child { border-bottom: none; }
 .emr-item:hover { background: #f9fafb; }
-.emr-item-icon { color: #9ca3af; font-size: 0.9rem; width: 1.1rem; text-align: center; flex-shrink: 0; }
+.emr-item-icon { color: #9ca3af; font-size: 0.85rem; width: 1rem; text-align: center; flex-shrink: 0; }
 .emr-meta { flex: 1; min-width: 0; }
 .emr-meta a.emr-title {
     font-weight: 600; color: #111827; text-decoration: none; display: block;
-    font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .emr-meta a.emr-title:hover { color: #059669; }
 .emr-meta .emr-date {
-    font-size: 0.7rem; color: #9ca3af; display: block; margin-top: 1px;
+    font-size: 0.65rem; color: #9ca3af; display: block; margin-top: 1px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.emr-actions { display: flex; gap: 0.3rem; flex-shrink: 0; }
+.emr-actions { display: flex; gap: 0.25rem; flex-shrink: 0; }
 .emr-icbtn, .emr-icbtn-off {
-    width: 28px; height: 28px; display: inline-flex; align-items: center;
-    justify-content: center; border-radius: 0.4rem; font-size: 0.72rem;
+    width: 26px; height: 26px; display: inline-flex; align-items: center;
+    justify-content: center; border-radius: 0.4rem; font-size: 0.68rem;
     text-decoration: none;
 }
 .emr-icbtn { color: #6b7280; border: 1px solid #e5e7eb; background: #fff; }
@@ -1337,107 +1558,174 @@ foreach ($quickPrintMap as $key => $meta) {
 .emr-icbtn-off { color: #d1d5db; border: 1px solid #f3f4f6; background: #fafafa; cursor: not-allowed; }
 
 .emr-debug {
+    grid-column:1 / -1;
     background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 0.5rem;
-    padding: 0.5rem 0.75rem; font-size: 0.65rem; color: #334155; margin-top: 0.75rem;
+    padding: 0.5rem 0.75rem; font-size: 0.65rem; color: #334155; margin-top: 0.25rem;
     white-space: pre-wrap; word-break: break-word; font-family: monospace;
 }
 </style>
 
 <div class="emr-wrap">
-    <!-- Cetak Cepat — posisi di paling atas modal, hanya tombol singkat -->
-    <?php if ($quickHtml !== ''): ?>
-    <div class="qp-wrap">
-        <span class="qp-label">Cetak Cepat</span>
-        <?php echo $quickHtml; ?>
-    </div>
-    <?php endif; ?>
-
-    <!-- Jumlah dokumen + pencarian -->
-    <?php if (count($listEmr) > 0): ?>
-    <div class="emr-top">
-        <span class="emr-badge-count" title="Jumlah dokumen EMR"><?php echo count($listEmr); ?></span>
-        <input
-            type="text"
-            id="emrSearchInput"
-            class="emr-search"
-            placeholder="Cari EMR..."
-            value="<?php echo htmlspecialchars($qSearch); ?>"
-            autocomplete="off"
-        >
-    </div>
-    <?php endif; ?>
-
-    <!-- Daftar card EMR -->
-    <?php if (empty($listEmr)): ?>
-        <div class="text-center py-10">
-            <i class="fas fa-folder-open text-4xl text-gray-300 mb-3"></i>
-            <h3 class="text-base font-semibold text-gray-600">Belum ada data EMR</h3>
-            <p class="text-gray-400 text-xs mt-1">
-                Tidak ada dokumen EMR tersimpan untuk registrasi ini.
-                <?php if ($sourceError !== ''): ?>
-                <br><span class="text-amber-600">Info sumber data: <?php echo htmlspecialchars($sourceError); ?></span>
-                <?php endif; ?>
-            </p>
-        </div>
-    <?php else: ?>
-        <div class="emr-card-wrap border rounded-lg bg-white" id="emrListContainer">
-            <?php foreach ($listEmr as $idx => $item):
-                $emrFk     = $item['emrpasienfk'];
-                $noregItem = $item['noregistrasi'] !== '' ? $item['noregistrasi'] : $noregistrasi;
-                $editUrl   = emrBuildEditUrl(
-                    $webBase,
-                    $item['slug'],
-                    ($item['nocmfk'] !== '' ? $item['nocmfk'] : $nocmfk),
-                    $norec_pd,
-                    ($item['norec_apd'] !== '' ? $item['norec_apd'] : $norec_apd),
-                    $emrFk
-                );
-                $cetakUrl  = $item['table'] !== ''
-                    ? emrBuildCetakUrl($apiBase, $item['table'], $emrFk, $noregItem, $userCetak, $kdProfile, $tokenCetak)
-                    : '';
-                $searchHay = strtolower($item['namaemr'] . ' ' . $item['author'] . ' ' . $item['ruangan'] . ' ' . $item['table'] . ' ' . $item['noemr']);
-            ?>
-            <div class="emr-item" data-search="<?php echo htmlspecialchars($searchHay); ?>">
-                <i class="<?php echo htmlspecialchars($item['icon']); ?> emr-item-icon"></i>
-                <div class="emr-meta">
-                    <a class="emr-title" href="<?php echo htmlspecialchars($editUrl); ?>" target="_blank" title="Lihat / ubah EMR">
-                        <?php echo htmlspecialchars($item['namaemr']); ?>
-                    </a>
-                    <span class="emr-date">
-                        <?php echo emrTanggalIndoSimple($item['last_update']); ?>
-                        <?php if ($item['noemr'] !== ''): ?> · <?php echo htmlspecialchars($item['noemr']); ?><?php endif; ?>
-                        <?php if ($item['ruangan'] !== ''): ?> · <?php echo htmlspecialchars($item['ruangan']); ?><?php endif; ?>
-                        <?php if ($item['author'] !== '' && $item['author'] !== '-'): ?> · <?php echo htmlspecialchars($item['author']); ?><?php endif; ?>
-                    </span>
-                </div>
-                <div class="emr-actions">
-                    <a class="emr-icbtn" href="<?php echo htmlspecialchars($editUrl); ?>" target="_blank" title="Lihat / ubah">
-                        <i class="fas fa-eye"></i>
-                    </a>
-                    <?php if ($cetakUrl !== ''): $cetakUrl = str_replace(
-    'http://localhost',
-    'http://192.168.22.81',
-    $cetakUrl
-); ?>
-                    <a class="emr-icbtn" href="<?php echo htmlspecialchars($cetakUrl); ?>" target="_blank" title="Cetak">
-                        <i class="fas fa-print"></i>
-                    </a>
+    <div class="emr-grid">
+        <!-- KIRI 50% : Cetak Cepat + Lab + Radiologi -->
+        <div class="emr-col">
+            <!-- Cetak Cepat -->
+            <div class="emr-panel">
+                <div class="emr-panel-head"><i class="fas fa-print text-emerald-500"></i> Cetak Cepat</div>
+                <div class="emr-panel-body">
+                    <?php if ($quickHtml !== ''): ?>
+                        <div class="qp-wrap"><?php echo $quickHtml; ?></div>
                     <?php else: ?>
-                    <span class="emr-icbtn-off" title="Collection cetak belum diketahui"><i class="fas fa-ban"></i></span>
+                        <div class="mini-empty"><i class="fas fa-file-alt"></i>Tidak ada dokumen untuk cetak cepat</div>
                     <?php endif; ?>
                 </div>
             </div>
-            <?php endforeach; ?>
-        </div>
-    <?php endif; ?>
 
+            <!-- Lab -->
+            <div class="emr-panel">
+                <div class="emr-panel-head"><i class="fas fa-flask text-sky-500"></i> Laboratorium <span style="margin-left:auto;font-weight:600;text-transform:none;letter-spacing:0;color:#9ca3af;font-size:0.65rem;"><?php echo count($labOrders); ?> order</span></div>
+                <div class="emr-panel-body scroll-sm">
+                    <?php if (empty($labOrders)): ?>
+                        <div class="mini-empty"><i class="fas fa-flask"></i>Belum ada order laboratorium</div>
+                    <?php else: ?>
+                        <?php foreach ($labOrders as $order): ?>
+                            <div class="mini-order lab">
+                                <div class="mini-order-head">
+                                    <span>#<?php echo htmlspecialchars($order['noorder']); ?></span>
+                                    <span class="badge <?php echo $order['status']=='selesai'?'badge-selesai':($order['status']=='verifikasi'?'badge-verifikasi':'badge-pending'); ?>"><?php echo htmlspecialchars($order['status']); ?></span>
+                                    <span style="font-weight:400;color:#9ca3af;font-size:0.65rem;"><i class="far fa-clock mr-1"></i><?php echo htmlspecialchars($order['tglorder']); ?></span>
+                                </div>
+                                <div class="mini-order-meta">
+                                    <?php if ($order['ruanganasal'] !== '-' ): ?><span><?php echo htmlspecialchars($order['ruanganasal']); ?> → <?php echo htmlspecialchars($order['ruangantujuan']); ?></span> <?php endif; ?>
+                                    <?php if ($order['dokter'] !== '-' ): ?> · <?php echo htmlspecialchars($order['dokter']); ?><?php endif; ?>
+                                </div>
+                                <?php if (!empty($order['details'])): ?>
+                                <ul class="mini-order-produk">
+                                    <?php foreach ($order['details'] as $d): ?><li><i class="fas fa-check-circle text-emerald-500" style="font-size:0.6rem;"></i> <?php echo htmlspecialchars($d['namaproduk']); ?></li><?php endforeach; ?>
+                                </ul>
+                                <?php endif; ?>
+                                <div class="mini-order-actions">
+                                    <?php if (!empty($order['norec_apd']) && !empty($order['product_ids'])):
+                                        $cetakParams = http_build_query(array(
+                                            'noregistrasi' => $order['noregistrasi'],
+                                            'norec_apd' => $order['norec_apd'],
+                                            'product' => implode(',', array_unique($order['product_ids'])),
+                                            'norec_pp' => '',
+                                            'norec_so' => $order['norec_so'],
+                                            'user' => $userCetak,
+                                            'kdprofile' => '1',
+                                            'token' => $tokenCetak
+                                        ));
+                                        $cetakUrl = 'https://192.168.22.81/service/laboratorium/cetakan-hasil-lab-manual?'.$cetakParams;
+                                    ?>
+                                        <a href="<?php echo htmlspecialchars($cetakUrl); ?>" target="_blank" class="mini-btn mini-btn-cetak"><i class="fas fa-print"></i> Cetak</a>
+                                    <?php else: ?>
+                                        <span class="mini-btn mini-btn-off"><i class="fas fa-print"></i> Cetak</span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Radiologi -->
+            <div class="emr-panel">
+                <div class="emr-panel-head"><i class="fas fa-x-ray text-violet-500"></i> Radiologi <span style="margin-left:auto;font-weight:600;text-transform:none;letter-spacing:0;color:#9ca3af;font-size:0.65rem;"><?php echo count($radOrders); ?> order</span></div>
+                <div class="emr-panel-body scroll-sm">
+                    <?php if (empty($radOrders)): ?>
+                        <div class="mini-empty"><i class="fas fa-x-ray"></i>Belum ada order radiologi</div>
+                    <?php else: ?>
+                        <?php foreach ($radOrders as $order): ?>
+                            <div class="mini-order rad">
+                                <div class="mini-order-head">
+                                    <span>#<?php echo htmlspecialchars($order['noorder']); ?></span>
+                                    <span class="badge <?php echo $order['status']=='selesai'?'badge-selesai':($order['status']=='verifikasi'?'badge-verifikasi':'badge-pending'); ?>"><?php echo htmlspecialchars($order['status']); ?></span>
+                                    <span style="font-weight:400;color:#9ca3af;font-size:0.65rem;"><i class="far fa-clock mr-1"></i><?php echo htmlspecialchars($order['tglorder']); ?></span>
+                                </div>
+                                <?php if (!empty($order['details'])): ?>
+                                <ul class="mini-order-produk">
+                                    <?php foreach ($order['details'] as $d): ?><li><i class="fas fa-check-circle text-emerald-500" style="font-size:0.6rem;"></i> <?php echo htmlspecialchars($d['namaproduk']); ?></li><?php endforeach; ?>
+                                </ul>
+                                <?php endif; ?>
+                                <div class="mini-order-actions">
+                                    <?php if (!empty($order['expertise'])): ?>
+                                        <button onclick="showExpertise('<?php echo addslashes(str_replace(array("\r","\n"), array("\\r","\\n"), $order['expertise'])); ?>')" class="mini-btn mini-btn-hasil"><i class="fas fa-file-alt"></i> Hasil</button>
+                                    <?php else: ?>
+                                        <span class="mini-btn mini-btn-off">Hasil</span>
+                                    <?php endif; ?>
+                                    <?php if (!empty($order['norec_exper'])):
+                                        $userName = !empty($order['dokterbaca']) && $order['dokterbaca'] !== '-' ? $order['dokterbaca'] : $order['dokter'];
+                                        $cetakUrl = "http://192.168.22.81/service/radiologi/cetak-ekspertise-manual?".http_build_query(array('echo'=>'true','norec'=>$order['norec_exper'],'user'=>$userName,'kdprofile'=>'1','token'=>$tokenCetak));
+                                    ?>
+                                        <a href="<?php echo htmlspecialchars($cetakUrl); ?>" target="_blank" class="mini-btn mini-btn-cetak"><i class="fas fa-print"></i> Cetak</a>
+                                    <?php else: ?>
+                                        <span class="mini-btn mini-btn-off"><i class="fas fa-print"></i> Cetak</span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <!-- KANAN 50% : Pencarian EMR minimal + Daftar EMR -->
+        <div class="emr-col">
+            <div class="emr-panel" style="display:flex;flex-direction:column;flex:1;">
+                <div class="emr-panel-head"><i class="fas fa-notes-medical text-emerald-600"></i> EMR <span style="margin-left:auto;display:flex;align-items:center;gap:0.35rem;"><span style="background:#10b981;color:#fff;font-size:0.60rem;font-weight:700;padding:0.15rem 0.4rem;border-radius:9999px;"><?php echo count($listEmr); ?></span></span></div>
+                <div style="padding:0.5rem;border-bottom:1px solid #f3f4f6;">
+                    <div class="emr-search-wrap">
+                        <i class="fas fa-search" style="color:#9ca3af;font-size:0.70rem;"></i>
+                        <input type="text" id="emrSearchInput" class="emr-search" placeholder="Cari EMR..." value="<?php echo htmlspecialchars($qSearch); ?>" autocomplete="off">
+                        <?php if ($qSearch !== ''): ?><button onclick="document.getElementById('emrSearchInput').value='';document.getElementById('emrSearchInput').dispatchEvent(new Event('input'))" style="color:#9ca3af;font-size:0.70rem;background:none;border:none;cursor:pointer;"><i class="fas fa-times"></i></button><?php endif; ?>
+                    </div>
+                </div>
+                <?php if (empty($listEmr)): ?>
+                    <div class="mini-empty" style="padding:2rem 1rem;">
+                        <i class="fas fa-folder-open" style="font-size:1.6rem;"></i>
+                        <div style="font-weight:600;color:#6b7280;margin-top:0.3rem;">Belum ada data EMR</div>
+                        <div style="font-size:0.70rem;color:#9ca3af;margin-top:0.15rem;">Tidak ada dokumen EMR tersimpan untuk registrasi ini.</div>
+                        <?php if ($sourceError !== ''): ?><div style="font-size:0.65rem;color:#d97706;margin-top:0.3rem;"><?php echo htmlspecialchars($sourceError); ?></div><?php endif; ?>
+                    </div>
+                <?php else: ?>
+                    <div class="emr-card-wrap" id="emrListContainer" style="border:none;border-radius:0;max-height:62vh;">
+                        <?php foreach ($listEmr as $item):
+                            $emrFk     = $item['emrpasienfk'];
+                            $noregItem = $item['noregistrasi'] !== '' ? $item['noregistrasi'] : $noregistrasi;
+                            $editUrl   = emrBuildEditUrl($webBase,$item['slug'],($item['nocmfk'] !== '' ? $item['nocmfk'] : $nocmfk),$norec_pd,($item['norec_apd'] !== '' ? $item['norec_apd'] : $norec_apd),$emrFk);
+                            $cetakUrl  = $item['table'] !== '' ? emrBuildCetakUrl($apiBase, $item['table'], $emrFk, $noregItem, $userCetak, $kdProfile, $tokenCetak) : '';
+                            if ($cetakUrl !== '') $cetakUrl = str_replace('http://localhost','http://192.168.22.81',$cetakUrl);
+                            $searchHay = strtolower($item['namaemr'].' '.$item['author'].' '.$item['ruangan'].' '.$item['table'].' '.$item['noemr']);
+                        ?>
+                        <div class="emr-item" data-search="<?php echo htmlspecialchars($searchHay); ?>">
+                            <i class="<?php echo htmlspecialchars($item['icon']); ?> emr-item-icon"></i>
+                            <div class="emr-meta">
+                                <a class="emr-title" href="<?php echo htmlspecialchars($editUrl); ?>" target="_blank" title="Lihat / ubah EMR"><?php echo htmlspecialchars($item['namaemr']); ?></a>
+                                <span class="emr-date"><?php echo emrTanggalIndoSimple($item['last_update']); ?><?php if ($item['noemr'] !== ''): ?> · <?php echo htmlspecialchars($item['noemr']); ?><?php endif; ?><?php if ($item['ruangan'] !== ''): ?> · <?php echo htmlspecialchars($item['ruangan']); ?><?php endif; ?><?php if ($item['author'] !== '' && $item['author'] !== '-'): ?> · <?php echo htmlspecialchars($item['author']); ?><?php endif; ?></span>
+                            </div>
+                            <div class="emr-actions">
+                                <a class="emr-icbtn" href="<?php echo htmlspecialchars($editUrl); ?>" target="_blank" title="Lihat / ubah"><i class="fas fa-eye"></i></a>
+                                <?php if ($cetakUrl !== ''): ?>
+                                <a class="emr-icbtn" href="<?php echo htmlspecialchars($cetakUrl); ?>" target="_blank" title="Cetak"><i class="fas fa-print"></i></a>
+                                <?php else: ?>
+                                <span class="emr-icbtn-off" title="Collection cetak belum diketahui"><i class="fas fa-ban"></i></span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
     <?php if ($showDebug): ?>
     <div class="emr-debug">
         <b>Diagnosa sumber data EMR</b>
         <?php
         echo "\n" . 'norec_pd     : ' . htmlspecialchars($norec_pd);
         echo "\n" . 'noregistrasi : ' . htmlspecialchars($noregistrasi);
-        echo "\n" . 'hasil        : ' . htmlspecialchars($source) . ' (' . count($listEmr) . ' item)';
+        echo "\n" . 'hasil        : ' . htmlspecialchars($source) . ' (' . count($listEmr) . ' item) lab='.count($labOrders).' rad='.count($radOrders);
         echo "\n" . 'sumber       : ' . htmlspecialchars($sourceLabel);
         echo "\n" . 'catatan      : ' . htmlspecialchars($sourceError);
         foreach ($diag as $d) {
@@ -1461,5 +1749,7 @@ foreach ($quickPrintMap as $key => $meta) {
             items[i].style.display = (!q || hay.indexOf(q) !== -1) ? '' : 'none';
         }
     });
+    // autofocus minimal search
+    setTimeout(function(){ try{ input.focus(); }catch(e){} }, 120);
 })();
 </script>
