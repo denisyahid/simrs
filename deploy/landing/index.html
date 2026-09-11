@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="id">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SIMRS — Daftar Aplikasi</title>
+  <style>
+    :root { color-scheme: dark }
+    * { box-sizing: border-box }
+    body {
+      margin: 0; padding: 48px 24px; background: #0b1220; color: #e2e8f0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+    .wrap { max-width: 980px; margin: 0 auto }
+    h1 { font-size: 26px; margin: 0 0 6px }
+    p.sub { color: #94a3b8; margin: 0 0 28px }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: #fbbf24 }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px }
+    a.card {
+      display: block; text-decoration: none; color: inherit; background: #111c31;
+      border: 1px solid #263449; border-radius: 12px; padding: 18px;
+      transition: border-color .15s, transform .15s;
+    }
+    a.card:hover { border-color: #3b82f6; transform: translateY(-2px) }
+    .card h2 { font-size: 15px; margin: 0 0 6px }
+    .card .url { font-family: ui-monospace, Menlo, monospace; font-size: 13px; color: #60a5fa }
+    .card p { margin: 10px 0 0; font-size: 13px; color: #94a3b8; line-height: 1.5 }
+    .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px; background: #1e293b; color: #cbd5e1; border: 1px solid #334155; margin-bottom: 8px }
+    footer { margin-top: 34px; color: #64748b; font-size: 13px; line-height: 1.7 }
+    footer code { color: #7dd3fc }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <h1>SIMRS — akses satu pintu</h1>
+    <p class="sub">Semua aplikasi berada di bawah <code>http://localhost/simrs/</code>. Pastikan service terkait sudah
+      dijalankan (lihat <code>INSTALL_DAN_JALANKAN.md</code>).</p>
+
+    <div class="grid">
+      <a class="card" href="/simrs/">
+        <span class="tag">Vue 3 + Vite</span>
+        <h2>Aplikasi Petugas (frontend-v2)</h2>
+        <div class="url">http://localhost/simrs/</div>
+        <p>Registrasi, EMR, farmasi, kasir, akuntansi, laporan, master data.</p>
+      </a>
+
+      <a class="card" href="/simrs/viewer/">
+        <span class="tag">Angular 11</span>
+        <h2>Viewer Antrian / TV (viewer)</h2>
+        <div class="url">http://localhost/simrs/viewer/</div>
+        <p>Display antrian poli, kamar, operasi, dan pemanggil antrean.</p>
+      </a>
+
+      <a class="card" href="/simrs/kiosk/">
+        <span class="tag">Angular 11</span>
+        <h2>Kiosk Mandiri (kiosk)</h2>
+        <div class="url">http://localhost/simrs/kiosk/</div>
+        <p>Anjungan pendaftaran/check-in mandiri pasien.</p>
+      </a>
+
+      <a class="card" href="/simrs/e-reservasi/">
+        <span class="tag">Angular 7</span>
+        <h2>E-Reservasi (e-reservasi)</h2>
+        <div class="url">http://localhost/simrs/e-reservasi/</div>
+        <p>Reservasi/registrasi online pasien.</p>
+      </a>
+
+      <a class="card" href="/simrs/eis/">
+        <span class="tag">Laravel 7</span>
+        <h2>Penampil EMR / EIS (eis)</h2>
+        <div class="url">http://localhost/simrs/eis/</div>
+        <p>Penampil rekam medis elektronik & integrasi pusat data.</p>
+      </a>
+
+      <a class="card" href="/simrs/health">
+        <span class="tag">JSON</span>
+        <h2>Status semua service</h2>
+        <div class="url">http://localhost/simrs/health</div>
+        <p>Daftar port dan status aktif tiap aplikasi.</p>
+      </a>
+    </div>
+
+    <footer>
+      <b>API backend:</b> <code>http://localhost/simrs/service/…</code> (<code>token</code> pada header) ·
+      <b>Socket.IO:</b> <code>http://localhost/simrs/socket.io</code><br>
+      Bila halaman ini muncul dari nginx/Apache, berkas asalnya
+      <code>deploy/landing/index.html</code>. Alternatif tanpa nginx:
+      <code>node deploy/proxy/simrs-proxy.js</code> (port 8080).
+    </footer>
+  </div>
+</body>
+
+</html>

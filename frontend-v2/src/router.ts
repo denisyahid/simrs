@@ -45,12 +45,12 @@ import routes from 'pages-generated'
 export function createRouter() {
   const router = createClientRouter({
     /**
-     * If you need to serve vuero under a subdirectory,
-     * you have to set the name of the directory in createWebHistory here
-     * and update "base" config in vite.config.ts
+     * Jika aplikasi di-serve di sub-folder (mis. http://localhost/simrs/),
+     * set env VITE_BASE_PATH=/simrs/ saat dev/build — `import.meta.env.BASE_URL`
+     * otomatis berisi '/simrs/' sehingga router ikut menyesuaikan.
+     * Secara default (BASE_URL === '/') aplikasi berjalan di root.
      */
-    // history: createWebHistory('my-subdirectory'),
-    history: createWebHistory(),
+    history: createWebHistory(import.meta.env.BASE_URL),
     routes,
   })
   return router

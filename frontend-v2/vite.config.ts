@@ -7,8 +7,8 @@ import Components from 'unplugin-vue-components/vite'
 import ViteFonts from 'vite-plugin-fonts'
 import ViteRadar from 'vite-plugin-radar'
 import PurgeIcons from 'vite-plugin-purge-icons'
-import { imagetools } from 'vite-imagetools'
-import ImageMin from 'vite-plugin-imagemin'
+// import { imagetools } from 'vite-imagetools'
+// import ImageMin from 'vite-plugin-imagemin'
 import VueroDocumentation from './vite-plugin-vuero-doc/index'
 import { vueI18n } from '@intlify/vite-plugin-vue-i18n'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -17,6 +17,64 @@ import purgecss from 'rollup-plugin-purgecss'
 const SILENT = Boolean(process.env.SILENT) ?? false
 const SOURCE_MAP = Boolean(process.env.SOURCE_MAP) ?? false
 const SITEMAP_HOST = process.env.SITEMAP_HOST || 'http://localhost:3000/'
+/**
+ * Base path aplikasi.
+ * - Default `/` (dijalankan langsung, mis. http://localhost:2222/).
+ * - Set ke `/simrs/` bila aplikasi dipasang di sub-folder / reverse proxy,
+ *   mis. http://localhost/simrs/
+ *
+ * @example
+ *   VITE_BASE_PATH=/simrs/ npm run dev
+ *   VITE_BASE_PATH=/simrs/ npm run build
+ */
+const BASE_PATH = process.env.VITE_BASE_PATH || '/'
+/**
+ * Plugin optimasi gambar (`vite-imagetools`/sharp dan `vite-plugin-imagemin`)
+ * membutuhkan binary native yang diunduh saat `npm install`.
+ * Di mesin/CI tanpa akses unduh binary, set `SKIP_IMAGE_PLUGINS=true` agar
+ * konfigurasi tetap bisa dimuat (gambar tidak dioptimasi).
+ *
+ * @example
+ *   SKIP_IMAGE_PLUGINS=true npm run dev
+ */
+const SKIP_IMAGE_PLUGINS = process.env.SKIP_IMAGE_PLUGINS === 'true'
+
+/** Muat plugin gambar secara malas; lewati bila binary-nya tidak tersedia. */
+function loadImagePlugins(): any[] {
+  if (SKIP_IMAGE_PLUGINS) {
+    console.warn('[vite.config] SKIP_IMAGE_PLUGINS=true — optimasi gambar dilewati.')
+    return []
+  }
+  try {
+    /* eslint-disable @typescript-eslint/no-var-requires */
+    const { imagetools } = require('vite-imagetools')
+    const imagemod = require('vite-plugin-imagemin')
+    const ImageMin = imagemod.default || imagemod
+    return [
+      imagetools({ silent: SILENT }),
+      ImageMin({
+        verbose: !SILENT,
+        gifsicle: { optimizationLevel: 7, interlaced: false },
+        optipng: { optimizationLevel: 7 },
+        mozjpeg: { quality: 60 },
+        pngquant: { quality: [0.8, 0.9], speed: 4 },
+        svgo: {
+          plugins: [
+            { name: 'removeViewBox', active: false },
+            { name: 'removeEmptyAttrs', active: false },
+          ],
+        },
+      }),
+    ]
+  } catch (error) {
+    console.warn(
+      '[vite.config] Plugin optimasi gambar tidak dapat dimuat (binary native belum terpasang).',
+      (error as Error).message
+    )
+    console.warn('[vite.config] Jalankan dengan SKIP_IMAGE_PLUGINS=true untuk melewati peringatan ini.')
+    return []
+  }
+}
 
 /**
  * This is the main configuration file for vitejs
@@ -28,10 +86,10 @@ export default defineConfig({
   // Project root directory (where index.html is located).
   root: process.cwd(),
   // Base public path when served in development or production.
-  // You also need to add this base like `history: createWebHistory('my-subdirectory')`
-  // in ./src/router.ts
-  // base: '/my-subdirectory/',
-  base: '/',
+  // Nilai diambil dari env VITE_BASE_PATH (default '/'), sehingga aplikasi bisa
+  // dipasang di sub-folder tanpa mengubah kode. `src/router.ts` otomatis memakai
+  // `import.meta.env.BASE_URL` sebagai base router.
+  base: BASE_PATH,
   // Directory to serve as plain static assets.
   publicDir: 'public',
   // Adjust console output verbosity.
@@ -232,7 +290,7 @@ export default defineConfig({
      * @see https://github.com/antfu/vite-plugin-pwa
      */
     VitePWA({
-      base: '/',
+      base: BASE_PATH,
       includeAssets: ['favicon.svg', 'favicon.ico', 'robots.txt', 'apple-touch-icon.png'],
       manifest: {
         name: 'Transmedic - Apps',
@@ -288,48 +346,13 @@ export default defineConfig({
     }),
 
     /**
-     * vite-imagetools plugin allow to perform transformation (blur, resize, crop, etc)
-     * on images at build time
+     * Plugin optimasi gambar (vite-imagetools/`imagetools` + vite-plugin-imagemin/
+     * `ImageMin`) dimuat secara malas lewat loadImagePlugins() karena membutuhkan
+     * binary native (sharp/imagemin). Lewati dengan SKIP_IMAGE_PLUGINS=true.
      *
      * @see https://github.com/JonasKruckenberg/vite-imagetools
-     */
-    imagetools({
-      silent: SILENT,
-    }),
-
-    /**
-     * vite-plugin-imagemin optimize all images sizes from public or asset folder
-     *
      * @see https://github.com/anncwb/vite-plugin-imagemin
      */
-    ImageMin({
-      verbose: !SILENT,
-      gifsicle: {
-        optimizationLevel: 7,
-        interlaced: false,
-      },
-      optipng: {
-        optimizationLevel: 7,
-      },
-      mozjpeg: {
-        quality: 60,
-      },
-      pngquant: {
-        quality: [0.8, 0.9],
-        speed: 4,
-      },
-      svgo: {
-        plugins: [
-          {
-            name: 'removeViewBox',
-            active: false,
-          },
-          {
-            name: 'removeEmptyAttrs',
-            active: false,
-          },
-        ],
-      },
-    }),
+    ...loadImagePlugins(),
   ],
 })

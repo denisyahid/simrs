@@ -24,3 +24,6 @@ Thumbs.db
 # cache Python
 __pycache__/
 *.pyc
+
+# berkas runtime skrip deploy (log & PID service)
+/.run/

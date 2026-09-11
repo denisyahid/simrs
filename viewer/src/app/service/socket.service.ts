@@ -24,7 +24,12 @@ export class SocketService {
 	private callBack : (data : string) => any = null
 
 	constructor(){
-		this.socket = io(Config.get().socketIO);
+		// `socketPath` dipakai saat aplikasi diakses lewat sub-path /simrs,
+		// mis. path '/simrs/socket.io' (di-proxy ke socket-server port 2530).
+		this.socket = io(Config.get().socketIO, {
+			path: (Config.get() as any).socketPath || '/socket.io',
+			transports: ['websocket', 'polling'],
+		});
 
 	}
 
