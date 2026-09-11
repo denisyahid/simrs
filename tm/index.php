@@ -1422,7 +1422,7 @@ document.addEventListener("click", async function(e){
 
     if(!tr) return;
 
-    // jangan copy jika klik tombol atau link
+    // jangan proses jika klik tombol atau link
     if(e.target.closest("a,button")){
         return;
     }
@@ -1437,14 +1437,10 @@ document.addEventListener("click", async function(e){
 
         await navigator.clipboard.writeText(nosep);
 
-        // efek highlight
+        // Background hijau tetap sampai halaman di-refresh
         tr.classList.add("bg-green-200");
 
-        setTimeout(()=>{
-            tr.classList.remove("bg-green-200");
-        },700);
-
-        // toast kecil
+        // toast
         showToast("No SEP berhasil dicopy : " + nosep);
 
     }catch(err){
@@ -1454,7 +1450,6 @@ document.addEventListener("click", async function(e){
     }
 
 });
-
 
 function showToast(text){
 
@@ -1473,6 +1468,18 @@ function showToast(text){
     },1800);
 
 }
+document.addEventListener('contextmenu', function(e) {
+    const tr = e.target.closest('tr');
+
+    if (!tr) return;
+
+    const btnEmr = tr.querySelector('.btn-emr-modal');
+
+    if (btnEmr) {
+        e.preventDefault(); // matikan menu klik kanan browser
+        btnEmr.click();     // otomatis klik tombol EMR
+    }
+});
 </script>
 </body>
 </html>
