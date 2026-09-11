@@ -1429,10 +1429,10 @@ if ($billingUrl !== '') {
 ?>
 <style>
 .emr-wrap { font-size: 0.875rem; }
-/* Grid 50/50 */
+/* Grid kiri 70% / kanan (Cari EMR) 30% */
 .emr-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 7fr 3fr;
     gap: 0.75rem;
     align-items: start;
 }
@@ -1495,9 +1495,11 @@ if ($billingUrl !== '') {
 .badge-selesai { background:#dcfce7; color:#166534; }
 .badge-verifikasi { background:#dbeafe; color:#1e40af; }
 .badge-pending { background:#fef3c7; color:#92400e; }
-.mini-order-meta { font-size:0.68rem; color:#6b7280; margin-top:0.25rem; line-height:1.3; }
-.mini-order-produk { margin-top:0.3rem; }
-.mini-order-produk li { font-size:0.70rem; color:#374151; display:flex; gap:0.25rem; align-items:center; }
+/* Daftar produk: minimalis (tanpa ikon), 2 kolom bila lebih dari 1 item */
+.mini-order-produk { margin-top:0.35rem; list-style:none; padding:0; display:grid; grid-template-columns:1fr; gap:0.12rem 0.75rem; }
+.mini-order-produk.cols-2 { grid-template-columns:1fr 1fr; }
+.mini-order-produk li { font-size:0.68rem; color:#4b5563; line-height:1.4; display:flex; align-items:baseline; gap:0.35rem; min-width:0; }
+.mini-order-produk li::before { content:""; width:3px; height:3px; border-radius:50%; background:#cbd5e1; flex-shrink:0; }
 .mini-order-actions { display:flex; gap:0.3rem; margin-top:0.4rem; flex-wrap:wrap; }
 .mini-btn {
     display:inline-flex; align-items:center; gap:0.25rem;
@@ -1567,7 +1569,7 @@ if ($billingUrl !== '') {
 
 <div class="emr-wrap">
     <div class="emr-grid">
-        <!-- KIRI 50% : Cetak Cepat + Lab + Radiologi -->
+        <!-- KIRI 70% : Cetak Cepat + Lab + Radiologi -->
         <div class="emr-col">
             <!-- Cetak Cepat -->
             <div class="emr-panel">
@@ -1595,13 +1597,9 @@ if ($billingUrl !== '') {
                                     <span class="badge <?php echo $order['status']=='selesai'?'badge-selesai':($order['status']=='verifikasi'?'badge-verifikasi':'badge-pending'); ?>"><?php echo htmlspecialchars($order['status']); ?></span>
                                     <span style="font-weight:400;color:#9ca3af;font-size:0.65rem;"><i class="far fa-clock mr-1"></i><?php echo htmlspecialchars($order['tglorder']); ?></span>
                                 </div>
-                                <div class="mini-order-meta">
-                                    <?php if ($order['ruanganasal'] !== '-' ): ?><span><?php echo htmlspecialchars($order['ruanganasal']); ?> → <?php echo htmlspecialchars($order['ruangantujuan']); ?></span> <?php endif; ?>
-                                    <?php if ($order['dokter'] !== '-' ): ?> · <?php echo htmlspecialchars($order['dokter']); ?><?php endif; ?>
-                                </div>
                                 <?php if (!empty($order['details'])): ?>
-                                <ul class="mini-order-produk">
-                                    <?php foreach ($order['details'] as $d): ?><li><i class="fas fa-check-circle text-emerald-500" style="font-size:0.6rem;"></i> <?php echo htmlspecialchars($d['namaproduk']); ?></li><?php endforeach; ?>
+                                <ul class="mini-order-produk<?php echo count($order['details']) > 1 ? ' cols-2' : ''; ?>">
+                                    <?php foreach ($order['details'] as $d): ?><li><?php echo htmlspecialchars($d['namaproduk']); ?></li><?php endforeach; ?>
                                 </ul>
                                 <?php endif; ?>
                                 <div class="mini-order-actions">
@@ -1644,8 +1642,8 @@ if ($billingUrl !== '') {
                                     <span style="font-weight:400;color:#9ca3af;font-size:0.65rem;"><i class="far fa-clock mr-1"></i><?php echo htmlspecialchars($order['tglorder']); ?></span>
                                 </div>
                                 <?php if (!empty($order['details'])): ?>
-                                <ul class="mini-order-produk">
-                                    <?php foreach ($order['details'] as $d): ?><li><i class="fas fa-check-circle text-emerald-500" style="font-size:0.6rem;"></i> <?php echo htmlspecialchars($d['namaproduk']); ?></li><?php endforeach; ?>
+                                <ul class="mini-order-produk<?php echo count($order['details']) > 1 ? ' cols-2' : ''; ?>">
+                                    <?php foreach ($order['details'] as $d): ?><li><?php echo htmlspecialchars($d['namaproduk']); ?></li><?php endforeach; ?>
                                 </ul>
                                 <?php endif; ?>
                                 <div class="mini-order-actions">
@@ -1670,7 +1668,7 @@ if ($billingUrl !== '') {
             </div>
         </div>
 
-        <!-- KANAN 50% : Pencarian EMR minimal + Daftar EMR -->
+        <!-- KANAN 30% : Pencarian EMR minimal + Daftar EMR -->
         <div class="emr-col">
             <div class="emr-panel" style="display:flex;flex-direction:column;flex:1;">
                 <div class="emr-panel-head"><i class="fas fa-notes-medical text-emerald-600"></i> EMR <span style="margin-left:auto;display:flex;align-items:center;gap:0.35rem;"><span style="background:#10b981;color:#fff;font-size:0.60rem;font-weight:700;padding:0.15rem 0.4rem;border-radius:9999px;"><?php echo count($listEmr); ?></span></span></div>
