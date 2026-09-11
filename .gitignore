@@ -18,3 +18,5 @@ yarn-debug.log*
 
 .DS_Store
 Thumbs.db
+# hasil antara analisa database (dibuat ulang oleh tools/analisa/extract.py)
+/tools/analisa/out/
