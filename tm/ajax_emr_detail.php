@@ -1470,7 +1470,7 @@ if ($billingUrl !== '') {
 }
 .qp-btn {
     display: inline-flex; align-items: center; gap: 0.3rem;
-    padding: 0.32rem 0.7rem; font-size: 0.72rem; font-weight: 600;
+    padding: 0.42rem 0.9rem; font-size: 0.72rem; font-weight: 600;
     color: #374151; background: #ffffff; border: 1px solid #d1d5db;
     border-radius: 0.5rem; text-decoration: none; transition: all .15s ease;
     white-space: nowrap; line-height:1;
@@ -1585,25 +1585,16 @@ if ($billingUrl !== '') {
 
             <!-- Lab -->
             <div class="emr-panel">
-                <div class="emr-panel-head"><i class="fas fa-flask text-sky-500"></i> Laboratorium <span style="margin-left:auto;font-weight:600;text-transform:none;letter-spacing:0;color:#9ca3af;font-size:0.65rem;"><?php echo count($labOrders); ?> order</span></div>
+                <div class="emr-panel-head"><i class="fas fa-flask text-sky-500"></i> Laboratorium ( <?php echo count($labOrders); ?> ) <span style="margin-left:auto;font-weight:600;text-transform:none;letter-spacing:0;color:#9ca3af;font-size:0.65rem;"><?php echo count($labOrders); ?> order</span></div>
                 <div class="emr-panel-body scroll-sm">
                     <?php if (empty($labOrders)): ?>
                         <div class="mini-empty"><i class="fas fa-flask"></i>Belum ada order laboratorium</div>
                     <?php else: ?>
-                        <?php foreach ($labOrders as $order): ?>
+                        <?php foreach ($labOrders as $index =>$order): ?>
                             <div class="mini-order lab">
                                 <div class="mini-order-head">
-                                    <span>#<?php echo htmlspecialchars($order['noorder']); ?></span>
-                                    <span class="badge <?php echo $order['status']=='selesai'?'badge-selesai':($order['status']=='verifikasi'?'badge-verifikasi':'badge-pending'); ?>"><?php echo htmlspecialchars($order['status']); ?></span>
-                                    <span style="font-weight:400;color:#9ca3af;font-size:0.65rem;"><i class="far fa-clock mr-1"></i><?php echo htmlspecialchars($order['tglorder']); ?></span>
-                                </div>
-                                <?php if (!empty($order['details'])): ?>
-                                <ul class="mini-order-produk<?php echo count($order['details']) > 1 ? ' cols-2' : ''; ?>">
-                                    <?php foreach ($order['details'] as $d): ?><li><?php echo htmlspecialchars($d['namaproduk']); ?></li><?php endforeach; ?>
-                                </ul>
-                                <?php endif; ?>
-                                <div class="mini-order-actions">
-                                    <?php if (!empty($order['norec_apd']) && !empty($order['product_ids'])):
+                                    <span class="badge <?php echo $order['status']=='selesai'?'badge-selesai':($order['status']=='verifikasi'?'badge-verifikasi':'badge-pending'); ?>"> <?= $index + 1 ?> <?php echo htmlspecialchars($order['status']); ?></span>
+                                   <?php if (!empty($order['norec_apd']) && !empty($order['product_ids'])):
                                         $cetakParams = http_build_query(array(
                                             'noregistrasi' => $order['noregistrasi'],
                                             'norec_apd' => $order['norec_apd'],
@@ -1620,6 +1611,15 @@ if ($billingUrl !== '') {
                                     <?php else: ?>
                                         <span class="mini-btn mini-btn-off"><i class="fas fa-print"></i> Cetak</span>
                                     <?php endif; ?>
+                                    <span style="font-weight:400;color:#9ca3af;font-size:0.65rem;"><i class="far fa-clock mr-1"></i><?php echo htmlspecialchars($order['tglorder']); ?></span>
+                                </div>
+                                <?php if (!empty($order['details'])): ?>
+                                <ul class="mini-order-produk<?php echo count($order['details']) > 1 ? ' cols-2' : ''; ?>">
+                                    <?php foreach ($order['details'] as $d): ?><li><?php echo htmlspecialchars($d['namaproduk']); ?></li><?php endforeach; ?>
+                                </ul>
+                                <?php endif; ?>
+                                <div class="mini-order-actions">
+                                    
                                 </div>
                             </div>
                         <?php endforeach; ?>
