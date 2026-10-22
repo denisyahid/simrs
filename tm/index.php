@@ -734,6 +734,23 @@ $resetUrl = '?' . $resetQuery;
 .btn-bundle:hover {
     background-color: #7c3aed;
 }
+/* ===== Modal Edit Tanggal SPRI (backend native: ajax_update_spri.php) ===== */
+.spri-btn {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    padding: 0.34rem 0.85rem; font-size: 0.72rem; font-weight: 600;
+    color: #fff; background: #f59e0b; border: 1px solid #d97706;
+    border-radius: 0.45rem; cursor: pointer; transition: all .15s ease;
+    line-height: 1;
+}
+.spri-btn:hover { background: #d97706; }
+.spri-btn:disabled { background: #d1d5db; border-color: #9ca3af; cursor: not-allowed; }
+.spri-btn.ok { background: #10b981; border-color: #059669; }
+.spri-btn.err { background: #ef4444; border-color: #dc2626; }
+.spri-ok { color: #047857; font-weight: 600; }
+.spri-err { color: #b91c1c; font-weight: 600; }
+.spri-dates { list-style: none; padding: 0; margin: 0.35rem 0 0; }
+.spri-dates li { display: flex; justify-content: space-between; gap: 0.6rem; font-size: 0.70rem; color: #4b5563; padding: 0.12rem 0; border-bottom: 1px dashed #f3f4f6; }
+.spri-dates li span:last-child { font-weight: 600; color: #111827; }
     </style>
 </head>
 <body class="bg-gray-100 p-4">
@@ -763,6 +780,32 @@ $resetUrl = '?' . $resetQuery;
                 <div class="flex justify-center items-center py-8">
                     <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
                     <span class="ml-2 text-gray-500">Memuat data...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Edit Tanggal SPRI — backend native PHP sendiri: ajax_update_spri.php (MongoDB SuratPermintaanDirawat via wire protocol + audit ke Postgres) -->
+    <div id="spriModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden print-hide">
+        <div class="relative top-10 mx-auto p-4 border w-full max-w-md shadow-lg rounded-lg bg-white mb-8" style="border-color:#fbbf24;">
+            <div class="flex justify-between items-center border-b pb-2 mb-3" style="border-color:#fde68a;">
+                <h3 class="text-sm font-semibold" style="color:#92400e;">
+                    <i class="fas fa-calendar-alt text-amber-500 mr-1"></i>
+                    Edit Tanggal SPRI — <span id="spriNoreg"></span>
+                </h3>
+                <div class="flex items-center gap-1 flex-shrink-0">
+                    <button id="reloadSpriModal" class="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition" type="button" title="Muat ulang tanggal SPRI" aria-label="Muat ulang tanggal SPRI">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button id="closeSpriModal" class="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition" type="button" aria-label="Tutup">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="spriContent" class="text-sm">
+                <div class="flex justify-center items-center py-6">
+                    <i class="fas fa-spinner fa-spin text-xl text-gray-400"></i>
+                    <span class="ml-2 text-gray-500">Memuat tanggal SPRI...</span>
                 </div>
             </div>
         </div>
@@ -1201,6 +1244,279 @@ document.addEventListener('DOMContentLoaded', function() {
             if (emrLastBtn) loadEmrModal(emrLastBtn);
         });
     }
+
+    // === Modal Edit Tanggal SPRI (backend native php sendiri: ajax_update_spri.php) ===
+    // Satu input tanggal mengubah SEMUA tanggal pada dokumen SPRI (MongoDB
+    // collection SuratPermintaanDirawat): tanggalTindakan, tanggalRawatInap,
+    // tanggal (Garut), tanggalAdmission (Garut), tglPembuatan.
+    const spriModal = document.getElementById('spriModal');
+    const spriContent = document.getElementById('spriContent');
+    const spriNoreg = document.getElementById('spriNoreg');
+    const closeSpriBtn = document.getElementById('closeSpriModal');
+    const reloadSpriBtn = document.getElementById('reloadSpriModal');
+    let spriCtx = { norec_pd: '', emrpasienfk: '', noregistrasi: '' };
+
+    const SPRI_DATE_LABELS = [
+        ['tanggalTindakan', 'Tanggal Tindakan'],
+        ['tanggalRawatInap', 'Tanggal Rawat Inap'],
+        ['tanggal', 'Tanggal Surat (samping tulisan "Garut")'],
+        ['tanggalAdmission', 'Tanggal Admission (samping tulisan "Garut")'],
+        ['tglPembuatan', 'Tgl Pembuatan'],
+    ];
+
+    function closeSpriModal() {
+        if (!spriModal) return;
+        spriModal.classList.add('hidden');
+        spriContent.innerHTML = `<div class="flex justify-center items-center py-6">
+            <i class="fas fa-spinner fa-spin text-xl text-gray-400"></i>
+            <span class="ml-2 text-gray-500">Memuat tanggal SPRI...</span>
+        </div>`;
+    }
+
+    function openSpriModal() {
+        if (!spriModal) return;
+        spriModal.classList.remove('hidden');
+    }
+
+    // Bangun isi panel edit dari data tanggal hasil GET backend
+    function renderSpriPanel(data, sourceLabel) {
+        const d = data || {};
+        let rows = '';
+        SPRI_DATE_LABELS.forEach(function (pair) {
+            const val = d[pair[0]] || '-';
+            rows += `<li><span>${pair[1]}</span><span>${val}</span></li>`;
+        });
+        return `
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Tanggal SPRI baru:</label>
+            <input type="date" id="spriTanggalInput" value="${d.tanggal || ''}" style="border:1px solid #fcd34d;border-radius:0.4rem;padding:0.35rem 0.5rem;font-size:0.8rem;width:100%;color:#111827;background:#fff;">
+            <div class="mt-3 flex items-center gap-2">
+                <button type="button" id="spriSimpanBtn" class="spri-btn"><i class="fas fa-save"></i> Simpan</button>
+                <span id="spriStatus" style="font-size:0.70rem;color:#6b7280;"></span>
+            </div>
+            <div class="mt-2 text-xs" style="color:#a16207;">
+                <i class="fas fa-info-circle"></i>
+                Simpan mengubah <b>semua</b> tanggal di bawah ini sekaligus (jam mengikuti jam sekarang WIB):
+                <ul class="spri-dates">${rows}</ul>
+                <div class="mt-1" style="color:#9ca3af;">Sumber data: ${sourceLabel}</div>
+            </div>
+        `;
+    }
+
+    function setSpriStatus(text, cls) {
+        const span = document.getElementById('spriStatus');
+        if (!span) return;
+        span.textContent = text;
+        span.className = cls || '';
+    }
+
+    function loadSpriModal() {
+        if (!spriCtx.norec_pd) return;
+        const params = new URLSearchParams();
+        params.set('action', 'get');
+        params.set('norec_pd', spriCtx.norec_pd);
+        if (spriCtx.emrpasienfk) params.set('emrpasienfk', spriCtx.emrpasienfk);
+
+        spriContent.innerHTML = `<div class="flex justify-center items-center py-6">
+            <i class="fas fa-spinner fa-spin text-xl text-gray-400"></i>
+            <span class="ml-2 text-gray-500">Memuat tanggal SPRI...</span>
+        </div>`;
+
+        fetch('ajax_update_spri.php?' + params.toString())
+            .then(response => {
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                return response.json();
+            })
+            .then(res => {
+                if (!res || !res.success) {
+                    throw new Error((res && res.message) ? res.message : 'Gagal memuat tanggal SPRI.');
+                }
+                const data = res.data || {};
+                const tglMasuk = res.tgl_masuk || '';
+                const bits = [];
+                if (res.peringatan) {
+                    bits.push(`<i class="fas fa-exclamation-triangle"></i> ${res.peringatan}`);
+                }
+                // Otomatis: tanggal SPRI != tanggal masuk pasien -> isi kolom tanggal
+                // dengan tanggal masuk, simpan akan menyamakan SEMUA tanggal SPRI.
+                let autoFix = false;
+                if (res.sesuai === false && tglMasuk) {
+                    autoFix = true;
+                    bits.push(`<i class="fas fa-magic"></i> <b>Tanggal SPRI tidak sesuai tanggal masuk pasien (${tglMasuk})</b> — kolom tanggal di bawah diisi otomatis tanggal masuk. Klik <b>Simpan</b> untuk menyamakan semua tanggal SPRI.`);
+                }
+                let warnHtml = '';
+                if (bits.length) {
+                    warnHtml = `<div class="mt-2 text-xs text-left" style="color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:.4rem;padding:.4rem .5rem;">${bits.map(function (x) { return `<div>${x}</div>`; }).join('')}</div>`;
+                }
+                const labelSrc = (res.source === 'mongodb') ? 'MongoDB (dokumen SPRI)'
+                    : (res.source === 'rest') ? 'REST API (dokumen SPRI)'
+                    : 'fallback tanggal pendaftaran';
+                spriContent.innerHTML = renderSpriPanel(data, labelSrc) + warnHtml;
+                const inp = document.getElementById('spriTanggalInput');
+                if (inp) {
+                    if (autoFix) {
+                        inp.value = tglMasuk; // otomatis sesuai tanggal masuk pasien
+                    } else if (!data.tanggal) {
+                        inp.value = '';
+                    }
+                }
+            })
+            .catch(error => {
+                spriContent.innerHTML = `<p class="text-red-500 text-center py-4 text-xs">Gagal memuat tanggal SPRI: ${error.message}</p>`;
+            });
+    }
+
+    /**
+     * SATU KLIK LANGSUNG PERBAIKI: tombol Edit Tanggal SPRI (yang tampil saat
+     * tanggal SPRI tidak sesuai tanggal masuk) langsung menyamakan SEMUA tanggal
+     * SPRI dengan tanggal masuk pasien — tanpa tampilan input tanggal.
+     *   1) GET  action=get   -> ambil tgl_masuk (tanggal masuk pasien)
+     *   2) POST action=update(samaan tanggal = tgl_masuk) -> semua tanggal berubah
+     *   3) modal EMR dimuat ulang -> tombol otomatis hilang (sudah sesuai)
+     * Bila tgl_masuk tidak diketahui, jatuh kembali ke modal manual.
+     */
+    function autoFixSpri(btn) {
+        const norec    = btn.dataset.norec_pd || '';
+        const emrfk    = btn.dataset.emrpasienfk || '';
+        const origHtml = btn.innerHTML;
+        if (!norec || btn.dataset.busy === '1') return;
+        btn.dataset.busy = '1';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyamakan...';
+        btn.style.opacity = '0.75';
+
+        const getParams = new URLSearchParams();
+        getParams.set('action', 'get');
+        getParams.set('norec_pd', norec);
+        if (emrfk) getParams.set('emrpasienfk', emrfk);
+
+        fetch('ajax_update_spri.php?' + getParams.toString())
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (!res || !res.success || !res.tgl_masuk) {
+                    // tanggal masuk tidak diketahui -> jalur manual (modal edit)
+                    openSpriModalFallback(btn);
+                    return;
+                }
+                const body = { norec_pd: norec, tanggal: res.tgl_masuk };
+                if (emrfk) body.emrpasienfk = emrfk;
+                return fetch('ajax_update_spri.php?action=update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                })
+                    .then(function (r) { return r.json(); })
+                    .then(function (res2) {
+                        if (!res2 || !res2.success) {
+                            throw new Error((res2 && res2.message) ? res2.message : 'Gagal menyimpan tanggal SPRI.');
+                        }
+                        btn.innerHTML = '<i class="fas fa-check"></i> Tersimpan — tanggal SPRI = tanggal masuk';
+                        // Muat ulang modal EMR: deteksi ulang seharusnya tidak
+                        // menampilkan tombol lagi (tanggal kini sesuai).
+                        setTimeout(function () {
+                            if (emrLastBtn && emrModal && !emrModal.classList.contains('hidden')) {
+                                loadEmrModal(emrLastBtn);
+                            }
+                        }, 900);
+                    });
+            })
+            .catch(function (err) {
+                btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + (err.message || 'Gagal');
+                btn.style.opacity = '1';
+                btn.dataset.busy = '';
+                setTimeout(function () { btn.innerHTML = origHtml; }, 3500);
+            });
+    }
+
+    /** Fallback manual: buka modal edit (hanya bila otomatis tidak bisa) */
+    function openSpriModalFallback(btn) {
+        spriCtx = {
+            norec_pd:    btn.dataset.norec_pd || '',
+            emrpasienfk: btn.dataset.emrpasienfk || '',
+            noregistrasi: btn.dataset.noregistrasi || '',
+        };
+        if (!spriCtx.norec_pd) return;
+        spriNoreg.textContent = spriCtx.noregistrasi || '-';
+        openSpriModal();
+        loadSpriModal();
+        btn.dataset.busy = '';
+    }
+
+    // Klik tombol Edit Tanggal SPRI di dalam konten modal EMR (hasil AJAX)
+    // ->LANGSUNG otomatis menyamakan tanggal SPRI dengan tanggal masuk pasien.
+    document.body.addEventListener('click', function(e) {
+        const btn = e.target.closest('.qp-btn-spri-edit');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        autoFixSpri(btn);
+    });
+
+    if (reloadSpriBtn) reloadSpriBtn.addEventListener('click', loadSpriModal);
+    if (closeSpriBtn) closeSpriBtn.addEventListener('click', closeSpriModal);
+    window.addEventListener('click', function(e) {
+        if (e.target === spriModal) closeSpriModal();
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && spriModal && !spriModal.classList.contains('hidden')) {
+            closeSpriModal();
+        }
+    });
+
+    // Simpan tanggal SPRI (delegasi di spriContent karena isi selalu dirender ulang)
+    function resetSpriBtn(btn) {
+        btn.disabled = false;
+        btn.classList.remove('ok', 'err');
+        btn.innerHTML = '<i class="fas fa-save"></i> Simpan';
+    }
+
+    spriContent.addEventListener('click', function(e) {
+        const btn = e.target.closest('#spriSimpanBtn');
+        if (!btn) return;
+        const inp = document.getElementById('spriTanggalInput');
+        const tgl = (inp && inp.value) ? inp.value : '';
+        setSpriStatus('', '');
+        if (!tgl) {
+            setSpriStatus('Pilih tanggal dulu.', 'spri-err');
+            return;
+        }
+        if (!spriCtx.norec_pd) {
+            setSpriStatus('norec_pd tidak ditemukan.', 'spri-err');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+
+        const body = { norec_pd: spriCtx.norec_pd, tanggal: tgl };
+        if (spriCtx.emrpasienfk) body.emrpasienfk = spriCtx.emrpasienfk;
+
+        fetch('ajax_update_spri.php?action=update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (res && res.success) {
+                    btn.classList.add('ok');
+                    btn.innerHTML = '<i class="fas fa-check"></i> Tersimpan';
+                    setSpriStatus(res.message || 'Tanggal SPRI berhasil diperbarui.', 'spri-ok');
+                    // tampilkan nilai tanggal terbaru
+                    loadSpriModal();
+                    setTimeout(function () { resetSpriBtn(btn); }, 2000);
+                } else {
+                    btn.classList.add('err');
+                    btn.innerHTML = '<i class="fas fa-times"></i> Gagal';
+                    setSpriStatus((res && res.message) ? res.message : 'Gagal menyimpan.', 'spri-err');
+                    setTimeout(function () { resetSpriBtn(btn); }, 3500);
+                }
+            })
+            .catch(function (err) {
+                btn.classList.add('err');
+                btn.innerHTML = '<i class="fas fa-times"></i> Gagal';
+                setSpriStatus('Gagal: ' + err.message, 'spri-err');
+                setTimeout(function () { resetSpriBtn(btn); }, 3500);
+            });
+    });
 
     // === Bundle Modal ===
     const bundleModal = document.getElementById('bundleModal');

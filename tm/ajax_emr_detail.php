@@ -417,6 +417,154 @@ function emrReadBackendEnv($extraPaths = array())
     return array('path' => null, 'data' => array());
 }
 
+/**
+ * Baca tanggal dokumen SPRI yang SEBENARNYA via REST /emr/get-emr
+ * (dokumen SuratPermintaanDirawat itu sendiri — sumber otoritatif yang
+ * sama dengan modal Edit Tanggal SPRI). Keluaran array field => timestamp.
+ */
+function emrSpriRestDates($pdo, $apiBase, $jwtKey, $kdProfile, $nocmfk, $norec_pd, $emrpasienfk, $preferToken = '', &$diagNote = '')
+{
+    $fields = array('tanggal', 'tanggalTindakan', 'tanggalRawatInap', 'tanggalAdmission', 'tglPembuatan');
+    $out    = array_fill_keys($fields, '');
+    if ($nocmfk === '' && $pdo && $norec_pd !== '') {
+        try {
+            $st = $pdo->prepare("SELECT nocmfk FROM pasiendaftar_t WHERE norec = :norec LIMIT 1");
+            $st->execute(array(':norec' => $norec_pd));
+            $r = $st->fetch();
+            if ($r && !empty($r['nocmfk'])) $nocmfk = (string)$r['nocmfk'];
+        } catch (Exception $e) {
+            // biarkan kosong
+        }
+    }
+    if ($nocmfk === '') {
+        $diagNote = 'nocmfk kosong, REST get-emr dilewati';
+        return $out;
+    }
+
+    // Kandidat token: token sesi/URL dulu, lalu token buatan (loginuser_s)
+    $tokens = array();
+    if ($preferToken !== '' && is_string($preferToken)) {
+        $tokens[] = $preferToken;
+    }
+    if ($pdo) {
+        try {
+            $st = $pdo->prepare("SELECT namauser FROM loginuser_s
+                                 WHERE kdprofile = :kd AND statusenabled::text IN ('1','t','true')
+                                   AND namauser IS NOT NULL AND namauser <> ''
+                                 ORDER BY id");
+            $st->execute(array(':kd' => $kdProfile));
+            foreach (array_slice($st->fetchAll(PDO::FETCH_COLUMN), 0, 3) as $uName) {
+                $tokens[] = emrMintToken($uName, $kdProfile, $jwtKey);
+            }
+        } catch (Exception $e) {
+            // biarkan
+        }
+    }
+    if (empty($tokens)) {
+        $tokens[] = emrMintToken('pasa', $kdProfile, $jwtKey);
+    }
+
+    foreach ($tokens as $token) {
+        $url = rtrim($apiBase, '/') . '/emr/get-emr?' . http_build_query(array(
+            'nocmfk'      => $nocmfk,
+            'norec_pd'    => $norec_pd,
+            'collection'  => 'SuratPermintaanDirawat',
+            'emrpasienfk' => $emrpasienfk,
+            'token'       => $token,
+        ));
+        $res = emrHttpGetJson($url, array(
+            'Accept: application/json',
+            'token: ' . $token,
+            'skip_encrypt: true',
+        ), 30);
+        if (empty($res['ok'])) {
+            continue;
+        }
+        $json = json_decode((string)$res['body'], true);
+        $docs = array();
+        if (isset($json['response']) && is_array($json['response'])) {
+            $docs = $json['response'];
+            if (isset($docs['emr']) && is_array($docs['emr'])) {
+                $docs = $docs['emr'];
+            }
+        } elseif (isset($json[0]) && is_array($json[0])) {
+            $docs = $json;
+        }
+        if (empty($docs)) {
+            continue;
+        }
+        $d0 = $docs[0];
+        foreach ($fields as $f) {
+            if (isset($d0[$f]) && is_string($d0[$f]) && trim($d0[$f]) !== '') {
+                $ts = strtotime($d0[$f]);
+                if ($ts) {
+                    $out[$f] = (int)$ts;
+                }
+            }
+        }
+        $diagNote = 'OK via REST get-emr';
+        return $out;
+    }
+    $diagNote = 'REST get-emr tidak berhasil';
+    return $out;
+}
+
+/**
+ * Ambil tanggal-tanggal pada dokumen SPRI (SuratPermintaanDirawat)
+ * dari daftar dokumen mentah ($rawItems, hasil MongoDB/REST).
+ * Keluaran: array field => timestamp int (atau '' bila kosong):
+ *   tanggal, tanggalTindakan, tanggalRawatInap, tanggalAdmission, tglPembuatan
+ * Dipakai untuk mendeteksi otomatis kecocokan tanggal SPRI vs tanggal masuk.
+ */
+function emrFindSpriDates($rawItems, $emrfk)
+{
+    $fields = array('tanggal', 'tanggalTindakan', 'tanggalRawatInap', 'tanggalAdmission', 'tglPembuatan');
+    $out    = array();
+    foreach ($fields as $f) {
+        $out[$f] = '';
+    }
+    if ($emrfk === '') {
+        return $out;
+    }
+    foreach ((array)$rawItems as $row) {
+        if (is_object($row)) {
+            $row = emrBsonToPhp($row);
+        }
+        if (!is_array($row)) {
+            continue;
+        }
+        $tbl = '';
+        foreach (array('table', 'collection', 'log_collection', 'collection_master') as $k) {
+            if (isset($row[$k]) && trim((string)$row[$k]) !== '') {
+                $tbl = strtolower(trim((string)$row[$k]));
+                break;
+            }
+        }
+        $fk = '';
+        foreach (array('emrpasienfk', 'norec', 'norec_emr') as $k) {
+            if (!empty($row[$k])) {
+                $fk = (string)$row[$k];
+                break;
+            }
+        }
+        $tblMatch = ($tbl !== '' && strpos($tbl, 'suratpermintaandirawat') !== false);
+        $fkMatch  = ($fk !== '' && (string)$emrfk === $fk);
+        if (!$fkMatch && !$tblMatch) {
+            continue;
+        }
+        foreach ($fields as $f) {
+            if (isset($row[$f]) && is_string($row[$f]) && trim($row[$f]) !== '') {
+                $ts = strtotime($row[$f]);
+                if ($ts) {
+                    $out[$f] = (int)$ts; // timestamp WIB-normalized
+                }
+            }
+        }
+        break; // cukup 1 dokumen SPRI
+    }
+    return $out;
+}
+
 /** Konversi nilai BSON -> tipe PHP biasa */
 function emrBsonToPhp($value)
 {
@@ -1225,12 +1373,16 @@ $tokenCetak = $workingToken !== '' ? $workingToken : ($tokenFromUrl !== '' ? $to
 // Label tombol dibuat singkat tanpa penjelasan singkatan; nama lengkap hanya
 // muncul sebagai tooltip (atribut title).
 $quickPrintMap = array(
-    'suratpermintaandirawat' => array('collection' => 'SuratPermintaanDirawat', 'label' => 'SPRI',             'full' => 'Surat Permintaan Dirawat (SPRI)'),
-    'laporanoperasi'         => array('collection' => 'laporanOperasi',         'label' => 'Laporan Operasi',  'full' => 'Laporan Operasi'),
-    'laporanobservasi'       => array('collection' => 'laporanObservasi',       'label' => 'Laporan Observasi','full' => 'Laporan Observasi'),
-    'rujukanpasien'          => array('collection' => 'RujukanPasien',          'label' => 'Rujukan',          'full' => 'Rujukan Pasien'),
-    'resumemedis'            => array('collection' => 'resumeMedis',            'label' => 'Resume Medis',     'full' => 'Resume Medis'),
-    'ringkasankeluar'        => array('collection' => 'RingkasanKeluar',        'label' => 'Ringkasan Pulang', 'full' => 'Ringkasan Keluar / Pulang'),
+    'suratpermintaandirawat'          => array('collection' => 'SuratPermintaanDirawat',          'label' => 'SPRI',                  'full' => 'Surat Permintaan Dirawat (SPRI)'),
+    'laporanoperasi'                  => array('collection' => 'laporanOperasi',                  'label' => 'Laporan Operasi',       'full' => 'Laporan Operasi'),
+    'laporanobservasi'                => array('collection' => 'laporanObservasi',                'label' => 'Laporan Observasi',     'full' => 'Laporan Observasi'),
+    'rujukanpasien'                   => array('collection' => 'RujukanPasien',                   'label' => 'Rujukan',               'full' => 'Rujukan Pasien'),
+    'triagepasienigd'                 => array('collection' => 'TriagePasienIGD',                 'label' => 'Triage IGD',            'full' => 'Triage Pasien IGD'),
+    'asesmenawalmedisgawatdarurat'    => array('collection' => 'AsesmenAwalMedisGawatDarurat',    'label' => 'Asesmen Awal Medis GD', 'full' => 'Asesmen Awal Medis Gawat Darurat'),
+    'observasipasienkebidanan'        => array('collection' => 'ObservasiPasienKebidanan',        'label' => 'Lembar Obs. Kebidanan', 'full' => 'Lembar Observasi Pasien Kebidanan'),
+    // dihapus dari Cetak Cepat (masih bisa dicetak dari daftar EMR di kanan):
+    // 'resumemedis'   => Resume Medis
+    // 'ringkasankeluar' => Ringkasan Keluar / Pulang
 );
 $latestByCollection = array();
 foreach ($listEmr as $it) {
@@ -1250,6 +1402,72 @@ if ($emr_surat_fk !== '' && !isset($latestByCollection['suratpermintaandirawat']
         'namaemr'      => 'Surat Permintaan Dirawat',
         'noregistrasi' => $noregistrasi,
     );
+}
+
+// ============================================================
+// DATA TOMBOL EDIT TANGGAL SPRI (fitur: 1 tanggal mengubah
+// tanggalTindakan, tanggalRawatInap, tanggal (Garut),
+// tanggalAdmission (Garut), tglPembuatan di MongoDB)
+// Tombol Edit tampil DI BAWAH tombol Cetak Cepat hanya bila
+// pasien punya dokumen EMR SPRI DAN tanggal SPRI tidak sesuai
+// dengan tanggal masuk pasien (tglregistrasi). Klik tombol membuka
+// modal edit terpisah di tm/index.php; tanggal otomatis diisi
+// tanggal masuk, jadi Simpan langsung menyamakan semua tanggal.
+// Backend native : tm/ajax_update_spri.php (action=get|update).
+// ============================================================
+$spriPanelShow    = false;
+$spriPanelTanggal = date('Y-m-d');
+$spriPanelNoemr   = '';
+$spriEmrpasienfk  = '';
+$spriMismatch     = false;
+$spriDocDates     = array();
+if (isset($latestByCollection['suratpermintaandirawat'])) {
+    $spriItem = $latestByCollection['suratpermintaandirawat'];
+    $spriEmrpasienfk = (string)($spriItem['emrpasienfk'] ?? '');
+    $spriPanelNoemr  = (string)($spriItem['noemr'] ?? '');
+    // Tanggal masuk pasien (= tanggal pendaftaran, fallback hari ini)
+    if ($pdo && $norec_pd !== '') {
+        try {
+            $stmtSpri = $pdo->prepare("SELECT tglregistrasi FROM pasiendaftar_t WHERE norec = :norec LIMIT 1");
+            $stmtSpri->execute(array(':norec' => $norec_pd));
+            $rowSpri = $stmtSpri->fetch();
+            if ($rowSpri && !empty($rowSpri['tglregistrasi'])) {
+                $spriPanelTanggal = date('Y-m-d', strtotime($rowSpri['tglregistrasi']));
+            }
+        } catch (Exception $e) {
+            // biarkan default hari ini
+        }
+    }
+
+    // Baca tanggal SPRI pada dokumen SEBENARNYA via REST /emr/get-emr
+    // (sumber otoritatif — sama dengan modal Edit Tanggal SPRI). Bila REST
+    // gagal, coba baca dari dokumen mentah yang sudah ada di memori.
+    $spriRestNote = '';
+    $spriDocDates = emrSpriRestDates($pdo, $apiBase, $jwtKey, $kdProfile, $nocmfk, $norec_pd, $spriEmrpasienfk, $tokenFromUrl, $spriRestNote);
+    $spriAllEmpty = true;
+    foreach ($spriDocDates as $v) {
+        if ($v !== '') { $spriAllEmpty = false; break; }
+    }
+    if ($spriAllEmpty) {
+        $spriDocDates = emrFindSpriDates($rawItems, $spriEmrpasienfk);
+    }
+
+    $spriPanelShow = ($spriEmrpasienfk !== '');
+    if ($spriPanelShow && $spriPanelTanggal !== '') {
+        $adaTglSpri = false;
+        foreach ($spriDocDates as $v) {
+            if ($v === '') continue;
+            $adaTglSpri = true;
+            if (date('Y-m-d', (int)$v) !== $spriPanelTanggal) {
+                $spriMismatch = true;
+                break;
+            }
+        }
+        // Dokumen SPRI sama sekali tidak punya tanggal penting -> anggap perlu diperbaiki
+        if (!$adaTglSpri) {
+            $spriMismatch = true;
+        }
+    }
 }
 
 // Susun tombol cetak cepat (hanya untuk dokumen yang ada).
@@ -1565,6 +1783,10 @@ if ($billingUrl !== '') {
     padding: 0.5rem 0.75rem; font-size: 0.65rem; color: #334155; margin-top: 0.25rem;
     white-space: pre-wrap; word-break: break-word; font-family: monospace;
 }
+
+/* Tombol Edit Tanggal SPRI (di bawah Cetak Cepat) — modal edit ada di tm/index.php */
+.qp-btn-spri-edit { border-color: #fcd34d; color: #b45309; }
+.qp-btn-spri-edit:hover { border-color: #f59e0b; color: #92400e; background: #fffbeb; }
 </style>
 
 <div class="emr-wrap">
@@ -1579,6 +1801,23 @@ if ($billingUrl !== '') {
                         <div class="qp-wrap"><?php echo $quickHtml; ?></div>
                     <?php else: ?>
                         <div class="mini-empty"><i class="fas fa-file-alt"></i>Tidak ada dokumen untuk cetak cepat</div>
+                    <?php endif; ?>
+                    <?php if ($spriPanelShow && $spriMismatch): ?>
+                    <!-- Tombol Edit Tanggal SPRI — otomatis tampil DI BAWAH Cetak Cepat saat
+                         tanggal SPRI tidak sesuai tanggal masuk pasien. Membuka modal edit
+                         (tm/index.php) yang tanggalnya langsung diisi tanggal masuk. -->
+                    <div style="margin-top:0.5rem;padding-top:0.5rem;border-top:1px dashed #fde68a;">
+                        <button type="button" class="qp-btn qp-btn-spri-edit"
+                                title="Tanggal SPRI tidak sesuai tanggal masuk pasien — klik untuk menyamakan semua tanggal SPRI dengan tanggal masuk (<?php echo htmlspecialchars(date('d-m-Y', strtotime($spriPanelTanggal))); ?>)"
+                                data-norec_pd="<?php echo htmlspecialchars($norec_pd); ?>"
+                                data-emrpasienfk="<?php echo htmlspecialchars($spriEmrpasienfk); ?>"
+                                data-noregistrasi="<?php echo htmlspecialchars($noregistrasi); ?>">
+                            <i class="fas fa-calendar-alt" style="color:#f59e0b;"></i> Edit Tanggal SPRI
+                        </button>
+                        <span style="font-size:0.65rem;color:#b45309;font-weight:600;margin-left:0.35rem;">
+                            Tidak sesuai tanggal masuk (<?php echo htmlspecialchars(date('d-m-Y', strtotime($spriPanelTanggal))); ?>)
+                        </span>
+                    </div>
                     <?php endif; ?>
                 </div>
             </div>
@@ -1750,4 +1989,5 @@ if ($billingUrl !== '') {
     // autofocus minimal search
     setTimeout(function(){ try{ input.focus(); }catch(e){} }, 120);
 })();
+
 </script>
