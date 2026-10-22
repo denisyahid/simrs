@@ -696,6 +696,26 @@ $resetUrl = '?' . $resetQuery;
         .btn-cetak-surat:hover {
             background-color: #b91c1c;
         }
+        .btn-edit-spri {
+            background-color: #2563eb;
+            color: white;
+            font-weight: bold;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            border: none;
+            cursor: pointer;
+            display: inline-block;
+            margin-right: 2px;
+        }
+        .btn-edit-spri:hover {
+            background-color: #1d4ed8;
+        }
+        .btn-edit-spri:disabled {
+            background-color: #d1d5db;
+            color: #6b7280;
+            cursor: not-allowed;
+        }
 
         .btn-action {
     display: inline-flex;
@@ -784,6 +804,66 @@ $resetUrl = '?' . $resetQuery;
                 <span class="ml-2 text-gray-500">Memuat data...</span>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Modal Edit Tgl SPRI (AJAX -> ajax_update_tgl_spri.php) -->
+<div id="spriModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[70] hidden print-hide">
+    <div class="relative top-16 mx-auto p-5 border w-full max-w-md shadow-lg rounded-lg bg-white">
+        <div class="flex justify-between items-center border-b pb-2 mb-3">
+            <h3 class="text-lg font-semibold text-gray-800">
+                <i class="fas fa-calendar-day text-blue-600 mr-1"></i>
+                Edit Tgl SPRI — <span id="spriNoreg"></span>
+            </h3>
+            <button id="closeSpriModal" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="spriMsg" class="hidden mb-2 text-xs rounded px-3 py-2"></div>
+        <form id="spriForm" class="space-y-2 text-sm">
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700">No. RM</label>
+                    <input type="text" id="spriNorm" readonly
+                           class="w-full border rounded px-2 py-1 text-xs bg-gray-100">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700">No. Registrasi</label>
+                    <input type="text" id="spriNoReg" readonly
+                           class="w-full border rounded px-2 py-1 text-xs bg-gray-100">
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-700">No. SPRI</label>
+                <input type="text" id="spriNoSurat" readonly
+                       class="w-full border rounded px-2 py-1 text-xs bg-gray-100">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-700">📅 Tgl SPRI (Garut, ...)</label>
+                <input type="datetime-local" id="spriTgl" step="60"
+                       class="w-full border rounded px-2 py-1 text-xs">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-700">📅 Tgl Tindakan</label>
+                <input type="date" id="spriTglTindakan"
+                       class="w-full border rounded px-2 py-1 text-xs">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-700">📅 Tgl Rawat Inap</label>
+                <input type="date" id="spriTglRawatInap"
+                       class="w-full border rounded px-2 py-1 text-xs">
+            </div>
+            <div class="flex justify-end gap-2 pt-2 border-t">
+                <button type="button" id="batalSpriBtn"
+                        class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-1.5 rounded text-sm font-semibold">
+                    Batal
+                </button>
+                <button type="submit" id="simpanSpriBtn"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded text-sm font-semibold">
+                    <i class="fas fa-save"></i> Simpan
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 <div class="max-w-full mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
@@ -986,16 +1066,16 @@ $resetUrl = '?' . $resetQuery;
             </thead>
             <tbody>
                 <?php if (empty($data)): ?>
-                    <tr
-    class="hover:bg-gray-200 transition-all cursor-pointer patient-row"
-    data-nosep="<?= htmlspecialchars($row['nosep']) ?>"><td colspan="10" class="text-center py-4 text-gray-500">❌ Tidak ada data</td></tr>
+                    <tr class="hover:bg-gray-200 transition-all cursor-pointer patient-row">
+                        <td colspan="10" class="text-center py-4 text-gray-500">❌ Tidak ada data</td>
+                    </tr>
                 <?php else: ?>
                     <?php $NO = 1; foreach ($data as $row): ?>
                         <?php 
                             $nocmfk = $row['nocmfk'] ?? '';
                             $norec_pd = $row['norec_pd'] ?? '';
                             $norec_apd = $row['norec_apd'] ?? '';
-                            $linkEmr = "https://192.168.22.81/module/emr/profile-pasien/page-emr/surat-permintaan-dirawat?nocmfk=". urlencode($row['nocmfk'])."&norec_pasien_daftar=". urlencode($row['norec_pd'])." &norec_pd=". urlencode($row['norec_pd'])."&norec_apd=".urlencode($row['norec_apd']) ."&jenisobgyn&jenisinterna&jenistrauma&norec_emr=". urlencode($row['emrpasienfk_surat']) ."&edit=true";
+                            $linkEmr = "https://192.168.22.81/module/emr/profile-pasien/page-emr/surat-permintaan-dirawat?nocmfk=". urlencode($row['nocmfk'])."&norec_pasien_daftar=". urlencode($row['norec_pd'])."&norec_pd=". urlencode($row['norec_pd'])."&norec_apd=".urlencode($row['norec_apd']) ."&jenisobgyn&jenisinterna&jenistrauma&norec_emr=". urlencode($row['emrpasienfk_surat']) ."&edit=true";
                             $linkBilling = "/service/kasir/billing/report/rincian-biaya?noregistrasi=" . urlencode($row['noregistrasi']) . "&bangsa=" . urlencode($row['bangsa'] ?? 'WNI') . "&user=" . urlencode($userCetak) . "&kdprofile=" . $kdProfile . "&token=" . urlencode($token);
                             $hasRadiologi = $row['has_radiologi'] ?? 0;
                             // === Rujukan Manual ===
@@ -1046,8 +1126,19 @@ $resetUrl = '?' . $resetQuery;
                                         title="Lihat daftar EMR pasien">
                                     <i class="fas fa-stethoscope"></i> EMR
                                 </button>
-                                <!-- Buka form TM (Surat Permintaan Dirawat) di frontend Vue -->
-                              
+                                <!-- Tombol Edit Tgl SPRI (field "tanggal" dokumen SuratPermintaanDirawat) -->
+                                <button type="button"
+                                        class="btn-edit-spri"
+                                        data-norec_pd="<?= htmlspecialchars($norec_pd) ?>"
+                                        data-noregistrasi="<?= htmlspecialchars($row['noregistrasi']) ?>"
+                                        data-nocmfk="<?= htmlspecialchars($row['nocmfk']) ?>"
+                                        data-emr_surat_fk="<?= htmlspecialchars($row['emrpasienfk_surat'] ?? '') ?>"
+                                        data-nama="<?= htmlspecialchars($row['namapasien']) ?>"
+                                        data-norm="<?= htmlspecialchars($row['nocm']) ?>"
+                                        <?= empty($row['emrpasienfk_surat']) ? 'disabled' : '' ?>
+                                        title="<?= empty($row['emrpasienfk_surat']) ? 'SPRI belum ada untuk pasien ini' : 'Edit tanggal SPRI pasien ini' ?>">
+                                    <i class="fas fa-calendar-day"></i> Tgl SPRI
+                                </button>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -1248,6 +1339,157 @@ document.addEventListener('DOMContentLoaded', function() {
                 bundleContent.innerHTML = `<p class="text-red-500 text-center py-4">Gagal memuat data bundle: ${error.message}</p>`;
             });
     });
+
+    // === Modal Edit Tgl SPRI (ajax_update_tgl_spri.php) ===
+    const spriModal = document.getElementById('spriModal');
+    const spriForm = document.getElementById('spriForm');
+    const spriMsg = document.getElementById('spriMsg');
+    const spriNoreg = document.getElementById('spriNoreg');
+    const spriNorm = document.getElementById('spriNorm');
+    const spriNoReg = document.getElementById('spriNoReg');
+    const spriNoSurat = document.getElementById('spriNoSurat');
+    const spriTgl = document.getElementById('spriTgl');
+    const spriTglTindakan = document.getElementById('spriTglTindakan');
+    const spriTglRawatInap = document.getElementById('spriTglRawatInap');
+    const closeSpriBtn = document.getElementById('closeSpriModal');
+    const batalSpriBtn = document.getElementById('batalSpriBtn');
+    const simpanSpriBtn = document.getElementById('simpanSpriBtn');
+
+    let spriCtx = null; // { norec_pd, emr_surat_fk, id, ... }
+
+    function spriShowMsg(text, isError) {
+        spriMsg.textContent = text;
+        spriMsg.className = 'mb-2 text-xs rounded px-3 py-2 ' +
+            (isError ? 'bg-red-100 text-red-700 border border-red-300' : 'bg-green-100 text-green-700 border border-green-300');
+        spriMsg.classList.remove('hidden');
+    }
+
+    function closeSpriModal() {
+        spriModal.classList.add('hidden');
+        spriMsg.classList.add('hidden');
+        spriCtx = null;
+    }
+
+    if (closeSpriBtn) closeSpriBtn.addEventListener('click', closeSpriModal);
+    if (batalSpriBtn) batalSpriBtn.addEventListener('click', closeSpriModal);
+    window.addEventListener('click', function(e) {
+        if (e.target === spriModal) closeSpriModal();
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && spriModal && !spriModal.classList.contains('hidden')) {
+            closeSpriModal();
+        }
+    });
+
+    function openSpriModal(btn) {
+        // data-* bernama data-norec_pd (underscore) -> dataset.norec_pd
+        const norecPd = btn.getAttribute('data-norec_pd') || '';
+        const noregistrasi = btn.getAttribute('data-noregistrasi') || '';
+        const nocmfk = btn.getAttribute('data-nocmfk') || '';
+        const emrSuratFk = btn.getAttribute('data-emr_surat_fk') || '';
+        const nama = btn.getAttribute('data-nama') || '';
+        const norm = btn.getAttribute('data-norm') || '';
+
+        spriModal.classList.remove('hidden');
+        spriMsg.classList.add('hidden');
+        spriNoreg.textContent = noregistrasi + (nama ? ' · ' + nama : '');
+        spriNorm.value = norm;
+        spriNoReg.value = noregistrasi;
+        spriNoSurat.value = '';
+        spriTgl.value = '';
+        spriTglTindakan.value = '';
+        spriTglRawatInap.value = '';
+        simpanSpriBtn.disabled = true;
+
+        // PERBAIKAN: norec_pd wajib terkirim — cegah error "Parameter norec_pd diperlukan."
+        if (!norecPd && !noregistrasi) {
+            spriShowMsg('Parameter norec_pd diperlukan. Baris ini tidak memiliki data norec_pd / noregistrasi.', true);
+            return;
+        }
+
+        spriCtx = { norec_pd: norecPd, noregistrasi: noregistrasi, nocmfk: nocmfk, emr_surat_fk: emrSuratFk, id: '' };
+
+        const params = new URLSearchParams();
+        params.set('action', 'get');
+        params.set('norec_pd', norecPd);
+        if (noregistrasi) params.set('noregistrasi', noregistrasi);
+        if (emrSuratFk) params.set('emr_surat_fk', emrSuratFk);
+
+        fetch('ajax_update_tgl_spri.php?' + params.toString())
+            .then(r => r.json())
+            .then(json => {
+                if (!json.ok) {
+                    spriShowMsg(json.error || 'Gagal memuat data SPRI.', true);
+                    return;
+                }
+                spriCtx.id = json.data.id || '';
+                spriNoSurat.value = json.data.nosurat || '-';
+                spriTgl.value = json.data.tgl_spri || '';
+                spriTglTindakan.value = json.data.tgl_tindakan || '';
+                spriTglRawatInap.value = json.data.tgl_rawat_inap || '';
+                simpanSpriBtn.disabled = false;
+            })
+            .catch(err => {
+                spriShowMsg('Gagal memuat data SPRI: ' + err.message, true);
+            });
+    }
+
+    document.body.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-edit-spri');
+        if (!btn || btn.disabled) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        openSpriModal(btn);
+    });
+
+    if (spriForm) {
+        spriForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (!spriCtx) return;
+
+            if (!spriCtx.norec_pd && !spriCtx.noregistrasi) {
+                spriShowMsg('Parameter norec_pd diperlukan.', true);
+                return;
+            }
+
+            const body = new URLSearchParams();
+            body.set('action', 'save');
+            body.set('norec_pd', spriCtx.norec_pd);
+            if (spriCtx.noregistrasi) body.set('noregistrasi', spriCtx.noregistrasi);
+            if (spriCtx.emr_surat_fk) body.set('emr_surat_fk', spriCtx.emr_surat_fk);
+            if (spriCtx.id) body.set('id', spriCtx.id);
+            if (spriTgl.value) body.set('tgl_spri', spriTgl.value);
+            if (spriTglTindakan.value) body.set('tgl_tindakan', spriTglTindakan.value);
+            if (spriTglRawatInap.value) body.set('tgl_rawat_inap', spriTglRawatInap.value);
+
+            simpanSpriBtn.disabled = true;
+            fetch('ajax_update_tgl_spri.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                body: body.toString()
+            })
+                .then(r => r.json())
+                .then(json => {
+                    simpanSpriBtn.disabled = false;
+                    if (json.ok) {
+                        if (json.data) {
+                            spriTgl.value = json.data.tgl_spri || spriTgl.value;
+                            spriTglTindakan.value = json.data.tgl_tindakan || spriTglTindakan.value;
+                            spriTglRawatInap.value = json.data.tgl_rawat_inap || spriTglRawatInap.value;
+                        }
+                        spriShowMsg(json.message || 'Tanggal SPRI berhasil diperbarui.', false);
+                        showToast('Tgl SPRI berhasil diperbarui');
+                    } else {
+                        spriShowMsg(json.error || 'Gagal menyimpan tanggal SPRI.', true);
+                    }
+                })
+                .catch(err => {
+                    simpanSpriBtn.disabled = false;
+                    spriShowMsg('Gagal menyimpan: ' + err.message, true);
+                });
+        });
+    }
     });
 
 

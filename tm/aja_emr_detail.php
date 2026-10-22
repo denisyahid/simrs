@@ -23,16 +23,32 @@ try {
     exit;
 }
 
-$norec_pd     = trim($_GET['norec_pd'] ?? '');
-$noregistrasi = trim($_GET['noregistrasi'] ?? '');
+$norec_pd     = trim($_GET['norec_pd'] ?? $_POST['norec_pd'] ?? '');
+$noregistrasi = trim($_GET['noregistrasi'] ?? $_POST['noregistrasi'] ?? '');
 $nocmfk       = trim($_GET['nocmfk'] ?? '');
 $norec_apd    = trim($_GET['norec_apd'] ?? '');
 $emr_surat_fk = trim($_GET['emr_surat_fk'] ?? '');
 $qSearch      = trim($_GET['q'] ?? '');
 
+// PERBAIKAN: bila norec_pd kosong tetapi noregistrasi tersedia,
+// cari norec_pd dari pasiendaftar_t (sama perilaku dgn ajax_emr_detail.php)
+// sehingga error "Parameter norec_pd diperlukan." tidak muncul lagi.
+if ($norec_pd === '' && $noregistrasi !== '') {
+    try {
+        $stmt = $pdo->prepare("SELECT norec FROM pasiendaftar_t WHERE noregistrasi = :noreg AND statusenabled = true LIMIT 1");
+        $stmt->execute([':noreg' => $noregistrasi]);
+        $foundPd = $stmt->fetch();
+        if ($foundPd) {
+            $norec_pd = (string)$foundPd['norec'];
+        }
+    } catch (Exception $e) {
+        // biarkan kosong -> pesan error di bawah
+    }
+}
+
 if ($norec_pd === '') {
     http_response_code(400);
-    echo '<p class="text-red-500">Parameter norec_pd diperlukan</p>';
+    echo '<p class="text-red-500">Parameter norec_pd diperlukan (atau kirim noregistrasi untuk mencarinya otomatis).</p>';
     exit;
 }
 
