@@ -418,9 +418,73 @@ function emrReadBackendEnv($extraPaths = array())
 }
 
 /**
+ * Normalisasi nilai tanggal ke tanggal (Y-m-d) zona Asia/Jakarta (WIB).
+ * Menerima: timestamp epoch (detik), string epoch MILIket, atau string tanggal
+ * (ISO dengan/tanpa info zona, 'Y-m-d' polos, dll).
+ * Aturan:
+ *   - epoch (detik/milidetik)            -> dikonversi ke WIB
+ *   - string DENGAN info zona (Z/+07:00) -> dikonversi ke WIB
+ *   - string TANPA info zona             -> sudah waktu lokal WIB, diambil apa adanya
+ *     (TIDAK digeser — penting supaya server PHP yang timezone-nya bukan WIB
+ *      tidak menggeser tanggal silang 12/13 seperti pada cetak blade WIB).
+ * Keluaran 'Y-m-d' atau '' bila tidak dapat dibaca.
+ */
+function spriTanggalWib($value)
+{
+    if ($value === '' || $value === null) {
+        return '';
+    }
+    $wib = new DateTimeZone('Asia/Jakarta');
+    $s   = trim((string)$value);
+    // epoch detik (numerik murni pendek) atau epoch milidetik (>= 12 digit)
+    if (ctype_digit($s) && strlen($s) >= 9) {
+        $sec = (strlen($s) >= 12) ? (int)floor(((float)$s) / 1000) : (int)$s;
+        try {
+            $d = new DateTime('@' . $sec);
+            $d->setTimezone($wib);
+            return $d->format('Y-m-d');
+        } catch (Exception $e) {
+            return '';
+        }
+    }
+    // string tanggal berformat ISO / Y-m-d H:i:s
+    if (preg_match('/^(\d{4}-\d{2}-\d{2})([ T](\d{2}):(\d{2})(?::(\d{2}))?)?/', $s)) {
+        if (preg_match('/(Z|[+-]\d{2}:?\d{2})$/', $s)) {
+            // ada info zona -> konversi instant ke WIB
+            try {
+                $d = new DateTime($s);
+                $d->setTimezone($wib);
+                return $d->format('Y-m-d');
+            } catch (Exception $e) {
+                // lanjut: perlakukan sebagai waktu lokal apa adanya
+            }
+        }
+        // tanpa zona -> waktu lokal WIB apa adanya (tidak digeser)
+        return substr($s, 0, 10);
+    }
+    // format lain: hanya bila string membawa info zona, konversi ke WIB;
+    // kalau tidak, tunggu strtotime pada timezone server (tidak digeser)
+    if (preg_match('/(Z|[+-]\d{2}:?\d{2})$/', $s)) {
+        try {
+            $d = new DateTime($s);
+            $d->setTimezone($wib);
+            return $d->format('Y-m-d');
+        } catch (Exception $e) {
+            return '';
+        }
+    }
+    $ts = strtotime($s);
+    if ($ts !== false && $ts > 0) {
+        return date('Y-m-d', $ts); // timezone server sama untuk baca & tulis
+    }
+    return '';
+}
+
+/**
  * Baca tanggal dokumen SPRI yang SEBENARNYA via REST /emr/get-emr
  * (dokumen SuratPermintaanDirawat itu sendiri — sumber otoritatif yang
- * sama dengan modal Edit Tanggal SPRI). Keluaran array field => timestamp.
+ * sama dengan modal Edit Tanggal SPRI). Keluaran array field => tanggal
+ * WIB ('Y-m-d') atau '' bila kosong — semua sudah dinormalisasi ke WIB.
  */
 function emrSpriRestDates($pdo, $apiBase, $jwtKey, $kdProfile, $nocmfk, $norec_pd, $emrpasienfk, $preferToken = '', &$diagNote = '')
 {
@@ -493,12 +557,23 @@ function emrSpriRestDates($pdo, $apiBase, $jwtKey, $kdProfile, $nocmfk, $norec_p
         if (empty($docs)) {
             continue;
         }
+        // Pilih dokumen yang PASTI milik pasien ini (emrpasienfk cocok) bila
+        // tersedia — jangan asal pakai $docs[0] yang bisa bukan SPRI pasien ini.
         $d0 = $docs[0];
+        if ($emrpasienfk !== '' && count($docs) > 1) {
+            foreach ($docs as $dd) {
+                if (is_array($dd) && isset($dd['emrpasienfk'])
+                    && (string)$dd['emrpasienfk'] === (string)$emrpasienfk) {
+                    $d0 = $dd;
+                    break;
+                }
+            }
+        }
         foreach ($fields as $f) {
             if (isset($d0[$f]) && is_string($d0[$f]) && trim($d0[$f]) !== '') {
-                $ts = strtotime($d0[$f]);
-                if ($ts) {
-                    $out[$f] = (int)$ts;
+                $tglWib = spriTanggalWib($d0[$f]);
+                if ($tglWib !== '') {
+                    $out[$f] = $tglWib; // tanggal WIB-normalized (Y-m-d)
                 }
             }
         }
@@ -512,7 +587,7 @@ function emrSpriRestDates($pdo, $apiBase, $jwtKey, $kdProfile, $nocmfk, $norec_p
 /**
  * Ambil tanggal-tanggal pada dokumen SPRI (SuratPermintaanDirawat)
  * dari daftar dokumen mentah ($rawItems, hasil MongoDB/REST).
- * Keluaran: array field => timestamp int (atau '' bila kosong):
+ * Keluaran: array field => tanggal WIB 'Y-m-d' (atau '' bila kosong):
  *   tanggal, tanggalTindakan, tanggalRawatInap, tanggalAdmission, tglPembuatan
  * Dipakai untuk mendeteksi otomatis kecocokan tanggal SPRI vs tanggal masuk.
  */
@@ -554,9 +629,9 @@ function emrFindSpriDates($rawItems, $emrfk)
         }
         foreach ($fields as $f) {
             if (isset($row[$f]) && is_string($row[$f]) && trim($row[$f]) !== '') {
-                $ts = strtotime($row[$f]);
-                if ($ts) {
-                    $out[$f] = (int)$ts; // timestamp WIB-normalized
+                $tglWib = spriTanggalWib($row[$f]);
+                if ($tglWib !== '') {
+                    $out[$f] = $tglWib; // tanggal WIB-normalized (Y-m-d)
                 }
             }
         }
@@ -1432,7 +1507,9 @@ if (isset($latestByCollection['suratpermintaandirawat'])) {
             $stmtSpri->execute(array(':norec' => $norec_pd));
             $rowSpri = $stmtSpri->fetch();
             if ($rowSpri && !empty($rowSpri['tglregistrasi'])) {
-                $spriPanelTanggal = date('Y-m-d', strtotime($rowSpri['tglregistrasi']));
+                // Normalisasi ke tanggal WIB — jangan pakai date() server langsung
+                // supaya tanggal di deteksi sama dengan tanggal pada cetak SPRI.
+                $spriPanelTanggal = spriTanggalWib($rowSpri['tglregistrasi']);
             }
         } catch (Exception $e) {
             // biarkan default hari ini
@@ -1458,7 +1535,7 @@ if (isset($latestByCollection['suratpermintaandirawat'])) {
         foreach ($spriDocDates as $v) {
             if ($v === '') continue;
             $adaTglSpri = true;
-            if (date('Y-m-d', (int)$v) !== $spriPanelTanggal) {
+            if (spriTanggalWib($v) !== $spriPanelTanggal) {
                 $spriMismatch = true;
                 break;
             }

@@ -588,6 +588,64 @@ function spriFallbackDates($pdo, $norec_pd, $dateFields)
     return $data;
 }
 
+/**
+ * Normalisasi nilai tanggal ke tanggal (Y-m-d) zona Asia/Jakarta (WIB).
+ * Menerima: timestamp epoch (detik/milidetik string) atau string tanggal
+ * dengan/tanpa info zona. String tanpa info zona dianggap waktu lokal WIB
+ * (tidak digeser); string/kode epoch dengan zona dikonversi ke WIB.
+ * Keluaran 'Y-m-d' atau '' bila tidak dapat dibaca.
+ */
+function spriTanggalWib($value)
+{
+    if ($value === '' || $value === null) {
+        return '';
+    }
+    $wib = new DateTimeZone('Asia/Jakarta');
+    $s   = trim((string)$value);
+    // epoch detik (numerik murni pendek) atau epoch milidetik (>= 12 digit)
+    if (ctype_digit($s) && strlen($s) >= 9) {
+        $sec = (strlen($s) >= 12) ? (int)floor(((float)$s) / 1000) : (int)$s;
+        try {
+            $d = new DateTime('@' . $sec);
+            $d->setTimezone($wib);
+            return $d->format('Y-m-d');
+        } catch (Exception $e) {
+            return '';
+        }
+    }
+    // string tanggal berformat ISO / Y-m-d H:i:s
+    if (preg_match('/^(\d{4}-\d{2}-\d{2})([ T](\d{2}):(\d{2})(?::(\d{2}))?)?/', $s)) {
+        if (preg_match('/(Z|[+-]\d{2}:?\d{2})$/', $s)) {
+            // ada info zona -> konversi instant ke WIB
+            try {
+                $d = new DateTime($s);
+                $d->setTimezone($wib);
+                return $d->format('Y-m-d');
+            } catch (Exception $e) {
+                // lanjut: perlakukan sebagai waktu lokal apa adanya
+            }
+        }
+        // tanpa zona -> waktu lokal WIB apa adanya (tidak digeser)
+        return substr($s, 0, 10);
+    }
+    // format lain: bila membawa info zona, konversi ke WIB; kalau tidak,
+    // tunggu strtotime pada timezone server (jam server baca-tulis sama)
+    if (preg_match('/(Z|[+-]\d{2}:?\d{2})$/', $s)) {
+        try {
+            $d = new DateTime($s);
+            $d->setTimezone($wib);
+            return $d->format('Y-m-d');
+        } catch (Exception $e) {
+            return '';
+        }
+    }
+    $ts = strtotime($s);
+    if ($ts !== false && $ts > 0) {
+        return date('Y-m-d', $ts);
+    }
+    return '';
+}
+
 /** Tanggal masuk pasien (tglregistrasi pasiendaftar_t), format Y-m-d atau '' */
 function spriTglMasuk($pdo, $norec_pd)
 {
@@ -597,7 +655,7 @@ function spriTglMasuk($pdo, $norec_pd)
             $stmt->execute(array(':norec' => $norec_pd));
             $row = $stmt->fetch();
             if ($row && !empty($row['tglregistrasi'])) {
-                return date('Y-m-d', strtotime($row['tglregistrasi']));
+                return spriTanggalWib($row['tglregistrasi']);
             }
         } catch (Exception $e) {
             // biarkan kosong
@@ -617,7 +675,9 @@ function spriGetResponse($pdo, $norec_pd, $dateFields, $catatan, $source, $data,
     $sesuai = true;
     foreach ($data as $v) {
         if ($v === '' || $v === null) continue;
-        if ($tglMasuk === '' || date('Y-m-d', strtotime($v)) !== $tglMasuk) {
+        // Normalisasi ke tanggal WIB — jangan pakai date() server langsung
+        // (server dengan timezone selain WIB bisa salah baca tanggal).
+        if ($tglMasuk === '' || spriTanggalWib($v) !== $tglMasuk) {
             $sesuai = false;
             break;
         }
